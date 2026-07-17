@@ -6,35 +6,41 @@ import { Building2, Database, FileText, Globe2, RefreshCcw } from "lucide-react"
 import {
   MetricCard,
   PageHeader,
-  ProjectMetaLine,
   ProjectShell,
 } from "./shell";
 import { getProjectCounts, useIndustryStore } from "@/lib/industry/store";
 import { relativeTime } from "@/lib/industry/format";
-import type { WorkspaceProjectSummary } from "@/lib/industry/workspace";
+import type {
+  WorkspaceActivityItem,
+  WorkspaceOverview,
+} from "@/lib/industry/workspace";
 
 export function OverviewPage({
   projectId,
-  projectSummary,
+  overview,
 }: {
   projectId: string;
-  projectSummary?: WorkspaceProjectSummary;
+  overview?: WorkspaceOverview;
 }) {
   const storeProject = useIndustryStore((s) => s.projects.find((p) => p.id === projectId));
   const state = useIndustryStore((s) => s);
-  const startDemoRun = useIndustryStore((s) => s.startDemoRun);
-  const allSources = useIndustryStore((s) => s.sources);
-  const allActivity = useIndustryStore((s) => s.activity);
-  const sources = useMemo(
-    () => allSources.filter((source) => source.projectId === projectId),
-    [allSources, projectId],
+  const project = overview?.project ?? storeProject;
+  const counts = overview?.counts ?? getProjectCounts(state, projectId);
+  const allStoreActivity = useIndustryStore((s) => s.activity);
+  const fallbackActivity = useMemo(
+    () =>
+      allStoreActivity
+        .filter((item) => item.projectId === projectId)
+        .slice(0, 6)
+        .map((item) => ({
+          id: item.id,
+          label: item.label,
+          tone: item.tone,
+          createdAt: new Date(item.createdAt).toISOString(),
+        })),
+    [allStoreActivity, projectId],
   );
-  const activity = useMemo(
-    () => allActivity.filter((item) => item.projectId === projectId).slice(0, 6),
-    [allActivity, projectId],
-  );
-  const project = projectSummary?.project ?? storeProject;
-  const counts = projectSummary?.counts ?? getProjectCounts(state, projectId);
+  const activity = overview?.activity ?? fallbackActivity;
 
   if (!project) return <MissingProject />;
 
@@ -42,26 +48,24 @@ export function OverviewPage({
     <ProjectShell
       projectId={projectId}
       projectName={project.name}
-      counts={projectSummary?.counts}
+      counts={overview?.counts}
       section="Overview"
     >
       <PageHeader
         title={project.name}
         actions={
-          <button
+          <Link
             className="iis-button iis-button-ghost"
-            type="button"
-            onClick={() => startDemoRun(projectId, sources.filter((s) => s.enabled).map((s) => s.id))}
+            href={`/projects/${projectId}/sources`}
           >
             <RefreshCcw size={18} /> Run Collection
-          </button>
+          </Link>
         }
       />
-      {projectSummary ? (
-        <WorkspaceProjectMetaLine projectSummary={projectSummary} />
-      ) : (
-        <ProjectMetaLine projectId={projectId} />
-      )}
+      <WorkspaceProjectMetaLine
+        tags={project.tags}
+        updatedAt={typeof project.updatedAt === "number" ? project.updatedAt : Date.parse(project.updatedAt)}
+      />
 
       <div className="iis-metric-grid">
         <MetricCard label="Companies" value={counts.companies} caption="Tracked" icon={<Building2 size={22} />} />
@@ -87,32 +91,46 @@ export function OverviewPage({
           <h2>Recent Activity</h2>
           <span>↗</span>
         </header>
-        {activity.map((item) => (
-          <div key={item.id} className="iis-activity-row">
-            <span className={`iis-activity-dot ${item.tone}`} />
-            <strong>{item.label}</strong>
-            <em>{relativeTime(item.createdAt)}</em>
+        {activity.length ? (
+          activity.map((item) => <ActivityRow key={item.id} item={item} />)
+        ) : (
+          <div className="iis-activity-row">
+            <span className="iis-activity-dot info" />
+            <strong>No collection activity yet</strong>
+            <em>-</em>
           </div>
-        ))}
+        )}
       </section>
     </ProjectShell>
   );
 }
 
 function WorkspaceProjectMetaLine({
-  projectSummary,
+  tags,
+  updatedAt,
 }: {
-  projectSummary: WorkspaceProjectSummary;
+  tags: string[];
+  updatedAt: number;
 }) {
-  const updatedAt = Date.parse(projectSummary.project.updatedAt);
   return (
     <div className="iis-meta-line">
-      {projectSummary.project.tags.map((tag) => (
+      {tags.map((tag) => (
         <span key={tag}>{tag}</span>
       ))}
       <small>
         Updated {Number.isFinite(updatedAt) ? relativeTime(updatedAt) : "-"}
       </small>
+    </div>
+  );
+}
+
+function ActivityRow({ item }: { item: WorkspaceActivityItem }) {
+  const createdAt = Date.parse(item.createdAt);
+  return (
+    <div className="iis-activity-row">
+      <span className={`iis-activity-dot ${item.tone}`} />
+      <strong>{item.label}</strong>
+      <em>{Number.isFinite(createdAt) ? relativeTime(createdAt) : "-"}</em>
     </div>
   );
 }
