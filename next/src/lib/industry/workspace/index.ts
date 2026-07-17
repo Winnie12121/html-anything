@@ -6,5 +6,6 @@ export * from "./fs";
 export * from "./overview";
 export * from "./paths";
 export * from "./projects";
+export * from "./reports";
 export * from "./schema";
 export * from "./sources";

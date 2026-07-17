@@ -71,6 +71,27 @@ export type WorkspaceDataView = {
 
 export type WorkspaceReportListItem = WorkspaceReportMetadata;
 
+export type WorkspaceSuggestedInsight = {
+  id: string;
+  type: "metric" | "table" | "chart" | "narrative";
+  title: string;
+  rationale: string;
+  recordRefs: string[];
+  config: Record<string, unknown>;
+  included: boolean;
+};
+
+export type WorkspaceReportSetupView = WorkspaceDataView & {
+  selectedRecords: WorkspaceDataRecord[];
+  suggestedInsights: WorkspaceSuggestedInsight[];
+};
+
+export type WorkspaceReportsView = {
+  project: WorkspaceProject;
+  counts: WorkspaceProjectCounts;
+  reports: WorkspaceReportListItem[];
+};
+
 export function formatWorkspaceDataKind(kind: WorkspaceDataKind): string {
   if (kind === "job") return "Jobs";
   if (kind === "news") return "News";

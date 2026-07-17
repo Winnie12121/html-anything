@@ -1,4 +1,5 @@
 import { ReportSetupPage } from "@/components/industry/report-setup";
+import { readWorkspaceReportSetup } from "@/lib/industry/workspace";
 
 export default async function Page({
   params,
@@ -6,5 +7,6 @@ export default async function Page({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  return <ReportSetupPage projectId={projectId} />;
+  const setupView = await readWorkspaceReportSetup(projectId);
+  return <ReportSetupPage projectId={projectId} setupView={setupView} />;
 }
