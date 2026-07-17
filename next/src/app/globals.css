@@ -945,6 +945,13 @@ a {
   outline: none;
 }
 
+.iis-form-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .iis-modal-actions {
   display: flex;
   justify-content: flex-end;

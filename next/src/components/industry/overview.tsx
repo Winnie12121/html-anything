@@ -11,9 +11,16 @@ import {
 } from "./shell";
 import { getProjectCounts, useIndustryStore } from "@/lib/industry/store";
 import { relativeTime } from "@/lib/industry/format";
+import type { WorkspaceProjectSummary } from "@/lib/industry/workspace";
 
-export function OverviewPage({ projectId }: { projectId: string }) {
-  const project = useIndustryStore((s) => s.projects.find((p) => p.id === projectId));
+export function OverviewPage({
+  projectId,
+  projectSummary,
+}: {
+  projectId: string;
+  projectSummary?: WorkspaceProjectSummary;
+}) {
+  const storeProject = useIndustryStore((s) => s.projects.find((p) => p.id === projectId));
   const state = useIndustryStore((s) => s);
   const startDemoRun = useIndustryStore((s) => s.startDemoRun);
   const allSources = useIndustryStore((s) => s.sources);
@@ -26,12 +33,18 @@ export function OverviewPage({ projectId }: { projectId: string }) {
     () => allActivity.filter((item) => item.projectId === projectId).slice(0, 6),
     [allActivity, projectId],
   );
-  const counts = getProjectCounts(state, projectId);
+  const project = projectSummary?.project ?? storeProject;
+  const counts = projectSummary?.counts ?? getProjectCounts(state, projectId);
 
   if (!project) return <MissingProject />;
 
   return (
-    <ProjectShell projectId={projectId} section="Overview">
+    <ProjectShell
+      projectId={projectId}
+      projectName={project.name}
+      counts={projectSummary?.counts}
+      section="Overview"
+    >
       <PageHeader
         title={project.name}
         actions={
@@ -44,7 +57,11 @@ export function OverviewPage({ projectId }: { projectId: string }) {
           </button>
         }
       />
-      <ProjectMetaLine projectId={projectId} />
+      {projectSummary ? (
+        <WorkspaceProjectMetaLine projectSummary={projectSummary} />
+      ) : (
+        <ProjectMetaLine projectId={projectId} />
+      )}
 
       <div className="iis-metric-grid">
         <MetricCard label="Companies" value={counts.companies} caption="Tracked" icon={<Building2 size={22} />} />
@@ -79,6 +96,24 @@ export function OverviewPage({ projectId }: { projectId: string }) {
         ))}
       </section>
     </ProjectShell>
+  );
+}
+
+function WorkspaceProjectMetaLine({
+  projectSummary,
+}: {
+  projectSummary: WorkspaceProjectSummary;
+}) {
+  const updatedAt = Date.parse(projectSummary.project.updatedAt);
+  return (
+    <div className="iis-meta-line">
+      {projectSummary.project.tags.map((tag) => (
+        <span key={tag}>{tag}</span>
+      ))}
+      <small>
+        Updated {Number.isFinite(updatedAt) ? relativeTime(updatedAt) : "-"}
+      </small>
+    </div>
   );
 }
 

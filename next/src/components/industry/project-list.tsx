@@ -1,25 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, Clock, Database, FileText, Plus } from "lucide-react";
 import { AppTopBar, AppLogo } from "./shell";
-import { getProjectCounts, useIndustryHydrated, useIndustryStore } from "@/lib/industry/store";
 import { relativeTime } from "@/lib/industry/format";
+import type { WorkspaceProjectSummary } from "@/lib/industry/workspace";
 
-export function ProjectListPage() {
+export function ProjectListPage({
+  projects,
+}: {
+  projects: WorkspaceProjectSummary[];
+}) {
   const router = useRouter();
-  const hydrated = useIndustryHydrated();
-  const projects = useIndustryStore((s) => s.projects);
-  const state = useIndustryStore((s) => s);
-  const createProject = useIndustryStore((s) => s.createProject);
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <main className="iis-app">
@@ -40,13 +37,11 @@ export function ProjectListPage() {
           <div />
         </div>
 
-        {!hydrated && <div className="iis-card iis-loading">Restoring workspace...</div>}
-
         <div className="iis-project-list">
-          {projects.map((project) => {
-            const counts = getProjectCounts(state, project.id);
+          {projects.map(({ project, counts }) => {
+            const updatedAt = Date.parse(project.updatedAt);
             return (
-              <Link key={project.id} href={`/projects/${project.id}/overview`} className="iis-project-card">
+              <Link key={project.slug} href={`/projects/${project.slug}/overview`} className="iis-project-card">
                 <div className="iis-project-dot" />
                 <div className="iis-project-card-main">
                   <h2>{project.name}</h2>
@@ -64,7 +59,7 @@ export function ProjectListPage() {
                 <div className="iis-project-card-side">
                   <strong>Open Project ›</strong>
                   <span>
-                    <Clock size={18} /> Updated {mounted ? relativeTime(project.updatedAt) : "-"}
+                    <Clock size={18} /> Updated {Number.isFinite(updatedAt) ? relativeTime(updatedAt) : "-"}
                   </span>
                 </div>
               </Link>
@@ -80,11 +75,33 @@ export function ProjectListPage() {
 
       {open && (
         <CreateProjectDialog
+          busy={creating}
+          error={error}
           onClose={() => setOpen(false)}
-          onCreate={(input) => {
-            const id = createProject(input);
-            setOpen(false);
-            router.push(`/projects/${id}/overview`);
+          onCreate={async (input) => {
+            setCreating(true);
+            setError(null);
+            try {
+              const res = await fetch("/api/projects", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(input),
+              });
+              const payload = (await res.json()) as {
+                project?: WorkspaceProjectSummary;
+                error?: string;
+              };
+              if (!res.ok || !payload.project) {
+                throw new Error(payload.error ?? "Project creation failed");
+              }
+              setOpen(false);
+              router.refresh();
+              router.push(`/projects/${payload.project.project.slug}/overview`);
+            } catch (err) {
+              setError(err instanceof Error ? err.message : String(err));
+            } finally {
+              setCreating(false);
+            }
           }}
         />
       )}
@@ -93,11 +110,15 @@ export function ProjectListPage() {
 }
 
 function CreateProjectDialog({
+  busy,
+  error,
   onClose,
   onCreate,
 }: {
+  busy: boolean;
+  error: string | null;
   onClose: () => void;
-  onCreate: (input: { name: string; industry: string; region: string }) => void;
+  onCreate: (input: { name: string; industry: string; region: string }) => void | Promise<void>;
 }) {
   const [name, setName] = useState("China Automotive Talent Insight");
   const [industry, setIndustry] = useState("Automotive");
@@ -125,12 +146,13 @@ function CreateProjectDialog({
           Region
           <input value={region} onChange={(event) => setRegion(event.target.value)} />
         </label>
+        {error && <p className="iis-form-error">{error}</p>}
         <div className="iis-modal-actions">
-          <button className="iis-button iis-button-ghost" type="button" onClick={onClose}>
+          <button className="iis-button iis-button-ghost" type="button" onClick={onClose} disabled={busy}>
             Cancel
           </button>
-          <button className="iis-button iis-button-primary" type="submit">
-            Create Project
+          <button className="iis-button iis-button-primary" type="submit" disabled={busy}>
+            {busy ? "Creating..." : "Create Project"}
           </button>
         </div>
       </form>

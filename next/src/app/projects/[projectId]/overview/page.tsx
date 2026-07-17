@@ -1,4 +1,5 @@
 import { OverviewPage } from "@/components/industry/overview";
+import { readWorkspaceProject } from "@/lib/industry/workspace";
 
 export default async function Page({
   params,
@@ -6,5 +7,6 @@ export default async function Page({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  return <OverviewPage projectId={projectId} />;
+  const projectSummary = await readWorkspaceProject(projectId).catch(() => undefined);
+  return <OverviewPage projectId={projectId} projectSummary={projectSummary} />;
 }

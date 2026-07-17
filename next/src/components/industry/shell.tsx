@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { getProjectCounts, useIndustryStore } from "@/lib/industry/store";
 import { relativeTime } from "@/lib/industry/format";
+import type { WorkspaceProjectCounts } from "@/lib/industry/workspace";
 
 export function AppLogo() {
   return (
@@ -32,9 +33,11 @@ export function AppLogo() {
 
 export function AppTopBar({
   projectId,
+  projectName,
   section,
 }: {
   projectId?: string;
+  projectName?: string;
   section?: string;
 }) {
   const project = useIndustryStore((s) =>
@@ -50,10 +53,10 @@ export function AppTopBar({
     <header className="iis-topbar">
       <div className="iis-topbar-left">
         <AppLogo />
-        {project && (
+        {(project || projectName) && projectId && (
           <nav className="iis-breadcrumbs" aria-label="Breadcrumb">
             <span>›</span>
-            <Link href={`/projects/${project.id}/overview`}>{project.name}</Link>
+            <Link href={`/projects/${projectId}/overview`}>{project?.name ?? projectName}</Link>
             {section && (
               <>
                 <span>›</span>
@@ -90,28 +93,38 @@ export function RunProgressChip({ progress }: { progress: number }) {
 
 export function ProjectShell({
   projectId,
+  projectName,
+  counts,
   section,
   children,
 }: {
   projectId: string;
+  projectName?: string;
+  counts?: WorkspaceProjectCounts;
   section: string;
   children: React.ReactNode;
 }) {
   return (
     <main className="iis-app">
-      <AppTopBar projectId={projectId} section={section} />
+      <AppTopBar projectId={projectId} projectName={projectName} section={section} />
       <div className="iis-project-frame">
-        <ProjectSidebar projectId={projectId} />
+        <ProjectSidebar projectId={projectId} counts={counts} />
         <section className="iis-page">{children}</section>
       </div>
     </main>
   );
 }
 
-export function ProjectSidebar({ projectId }: { projectId: string }) {
+export function ProjectSidebar({
+  projectId,
+  counts: workspaceCounts,
+}: {
+  projectId: string;
+  counts?: WorkspaceProjectCounts;
+}) {
   const pathname = usePathname();
   const state = useIndustryStore((s) => s);
-  const counts = getProjectCounts(state, projectId);
+  const counts = workspaceCounts ?? getProjectCounts(state, projectId);
   const items = [
     { id: "overview", label: "Overview", icon: Grid2X2, count: undefined },
     { id: "sources", label: "Sources", icon: Globe2, count: counts.sources },
