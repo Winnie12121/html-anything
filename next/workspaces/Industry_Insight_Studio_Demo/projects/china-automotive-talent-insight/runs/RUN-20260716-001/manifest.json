@@ -1,0 +1,13 @@
+{
+  "id": "RUN-20260716-001",
+  "sourceIds": [
+    "career-sites",
+    "tavily"
+  ],
+  "status": "completed",
+  "progress": 100,
+  "startedAt": "2026-07-16T09:42:00.000Z",
+  "endedAt": "2026-07-16T09:47:00.000Z",
+  "recordsCreated": 3,
+  "warnings": []
+}

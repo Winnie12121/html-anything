@@ -1,0 +1,34 @@
+{
+  "id": "china-automotive-hiring-comparison",
+  "slug": "china-automotive-hiring-comparison",
+  "name": "China Automotive Hiring Comparison",
+  "templateId": "competitor-hiring-comparison",
+  "audience": "HR leadership",
+  "language": "English",
+  "goal": "Compare competitor hiring activity, role demand, and market signals.",
+  "status": "ready",
+  "currentHtmlPath": "current.html",
+  "sections": [
+    {
+      "id": "executive-summary",
+      "title": "Executive Summary",
+      "selector": "[data-section-id='executive-summary']",
+      "order": 0,
+      "sourceRecordRefs": [
+        "sources/external/normalized/news.jsonl#news-001"
+      ]
+    },
+    {
+      "id": "company-comparison",
+      "title": "Company Comparison",
+      "selector": "[data-section-id='company-comparison']",
+      "order": 1,
+      "sourceRecordRefs": [
+        "sources/external/normalized/jobs.jsonl#job-001",
+        "sources/external/normalized/jobs.jsonl#job-002"
+      ]
+    }
+  ],
+  "createdAt": "2026-07-16T10:00:00.000Z",
+  "updatedAt": "2026-07-16T10:00:00.000Z"
+}

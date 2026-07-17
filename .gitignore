@@ -24,6 +24,7 @@
 /next/.next/
 /out/
 /next/out/
+/next/.industry-insight/
 
 # production
 /build
