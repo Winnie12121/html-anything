@@ -9,6 +9,7 @@ import {
 import { readJsonFile } from "../fs";
 import {
   addWorkspaceReportComment,
+  buildWorkspaceReportGenerationPrompt,
   createWorkspaceReport,
   readWorkspaceReportSetup,
   readWorkspaceReportStudio,
@@ -85,6 +86,49 @@ describe("workspace reports", () => {
 
     const reports = await readWorkspaceReports(DEMO_PROJECT_SLUG, root);
     expect(reports.reports.some((report) => report.slug === result.reportSlug)).toBe(true);
+  });
+
+  it("builds a CLI report prompt that requires one standalone HTML file", async () => {
+    await ensureDemoWorkspace(root);
+
+    const prompt = await buildWorkspaceReportGenerationPrompt(
+      DEMO_PROJECT_SLUG,
+      {
+        name: "CLI Generated Report",
+        templateId: "competitor-hiring-comparison",
+        audience: "HR leadership",
+        language: "English",
+        goal: "Generate with a local CLI.",
+        includedInsightIds: ["metric-job-volume"],
+      },
+      root,
+    );
+
+    expect(prompt).toContain("one complete standalone single-page HTML document");
+    expect(prompt).toContain("Do not split sections into separate files");
+    expect(prompt).toContain("data-section-id");
+    expect(prompt).toContain("CLI Generated Report");
+  });
+
+  it("stores externally generated HTML as the report current.html", async () => {
+    await ensureDemoWorkspace(root);
+
+    const { reportSlug } = await createWorkspaceReport(
+      DEMO_PROJECT_SLUG,
+      {
+        name: "CLI HTML Report",
+        templateId: "competitor-hiring-comparison",
+        audience: "HR leadership",
+        language: "English",
+        goal: "Use generated HTML.",
+        includedInsightIds: ["metric-job-volume"],
+        generatedHtml: "<!doctype html><html><body><h1>CLI Output</h1></body></html>",
+      },
+      root,
+    );
+
+    const studio = await readWorkspaceReportStudio(DEMO_PROJECT_SLUG, reportSlug, root);
+    expect(studio.html).toBe("<!doctype html><html><body><h1>CLI Output</h1></body></html>");
   });
 
   it("loads and saves report studio HTML from current.html", async () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,6 +17,7 @@ import {
   ArrowLeft,
   RefreshCcw,
 } from "lucide-react";
+import { useStore, type AgentInfo } from "@/lib/store";
 import { getProjectCounts, useIndustryStore } from "@/lib/industry/store";
 import { relativeTime } from "@/lib/industry/format";
 import type { WorkspaceProjectCounts } from "@/lib/industry/workspace/client";
@@ -48,6 +50,11 @@ export function AppTopBar({
       ? s.runs.find((run) => run.projectId === projectId && run.status === "running")
       : s.runs.find((run) => run.status === "running"),
   );
+  const agents = useStore((s) => s.agents);
+  const selectedAgentId = useStore((s) => s.selectedAgent);
+  const agentModels = useStore((s) => s.agentModels);
+  const selectedAgent = agents.find((agent) => agent.id === selectedAgentId);
+  const selectedModel = selectedAgentId ? agentModels[selectedAgentId] ?? "default" : "default";
 
   return (
     <header className="iis-topbar">
@@ -68,9 +75,10 @@ export function AppTopBar({
       </div>
       <div className="iis-topbar-actions">
         {running && <RunProgressChip progress={running.progress} />}
-        <button className="iis-button iis-button-muted" type="button">
-          <Bot size={17} /> Claude Code
-        </button>
+        <IndustryAgentConnector
+          selectedAgent={selectedAgent}
+          selectedModel={selectedModel}
+        />
         <button className="iis-button iis-button-ghost" type="button">
           <FolderOpen size={18} /> Open Folder
         </button>
@@ -79,6 +87,121 @@ export function AppTopBar({
         </button>
       </div>
     </header>
+  );
+}
+
+function IndustryAgentConnector({
+  selectedAgent,
+  selectedModel,
+}: {
+  selectedAgent?: AgentInfo;
+  selectedModel: string;
+}) {
+  const agents = useStore((s) => s.agents);
+  const setAgents = useStore((s) => s.setAgents);
+  const selectedAgentId = useStore((s) => s.selectedAgent);
+  const setSelectedAgent = useStore((s) => s.setSelectedAgent);
+  const agentModels = useStore((s) => s.agentModels);
+  const setAgentModel = useStore((s) => s.setAgentModel);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const availableAgents = useMemo(
+    () => agents.filter((agent) => agent.available && !agent.unsupported),
+    [agents],
+  );
+
+  async function loadAgents() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/agents", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = (await res.json()) as { agents?: AgentInfo[] };
+      const nextAgents = payload.agents ?? [];
+      setAgents(nextAgents);
+      const available = nextAgents.filter((agent) => agent.available && !agent.unsupported);
+      if (!available.find((agent) => agent.id === selectedAgentId) && available.length) {
+        const preferred = available.find((agent) => agent.id === "claude") ?? available[0];
+        setSelectedAgent(preferred?.id);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!agents.length) void loadAgents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="iis-agent-connector">
+      <button
+        className={selectedAgent ? "iis-button iis-button-muted connected" : "iis-button iis-button-muted"}
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        title="Choose local CLI agent"
+      >
+        <Bot size={17} />
+        {selectedAgent ? selectedAgent.label : loading ? "Scanning..." : "Connect CLI"}
+        {selectedAgent && selectedModel !== "default" && <code>{selectedModel}</code>}
+      </button>
+      {open && (
+        <div className="iis-agent-menu">
+          <div className="iis-agent-menu-head">
+            <strong>Generation Agent</strong>
+            <button type="button" onClick={() => void loadAgents()} disabled={loading}>
+              {loading ? "Scanning..." : "Rescan"}
+            </button>
+          </div>
+          {error && <p className="iis-form-error">{error}</p>}
+          {availableAgents.length ? (
+            <div className="iis-agent-list">
+              {availableAgents.map((agent) => {
+                const selected = agent.id === selectedAgentId;
+                return (
+                  <button
+                    key={agent.id}
+                    className={selected ? "active" : ""}
+                    type="button"
+                    onClick={() => {
+                      setSelectedAgent(agent.id);
+                      setOpen(false);
+                    }}
+                  >
+                    <span>
+                      <strong>{agent.label}</strong>
+                      <small>{agent.vendor}</small>
+                    </span>
+                    {selected && <em>Connected</em>}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="iis-agent-empty">No supported local CLI agents detected.</p>
+          )}
+          {selectedAgent && (
+            <label className="iis-agent-model">
+              Model
+              <select
+                value={agentModels[selectedAgent.id] ?? "default"}
+                onChange={(event) => setAgentModel(selectedAgent.id, event.target.value)}
+              >
+                {selectedAgent.models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

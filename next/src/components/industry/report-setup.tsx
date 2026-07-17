@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart3, FileText, Sparkles } from "lucide-react";
+import { useStore } from "@/lib/store";
 import type { WorkspaceReportSetupView } from "@/lib/industry/workspace/client";
 import { formatWorkspaceDataKind } from "@/lib/industry/workspace/client";
 import { PageHeader, ProjectShell } from "./shell";
@@ -21,6 +22,15 @@ export function ReportSetupPage({
   setupView: WorkspaceReportSetupView;
 }) {
   const router = useRouter();
+  const selectedAgentId = useStore((s) => s.selectedAgent);
+  const agents = useStore((s) => s.agents);
+  const agentModels = useStore((s) => s.agentModels);
+  const agentBinOverrides = useStore((s) => s.agentBinOverrides);
+  const selectedAgent = agents.find((agent) => agent.id === selectedAgentId);
+  const selectedModel = selectedAgentId ? agentModels[selectedAgentId] ?? "default" : "default";
+  const selectedBinOverride = selectedAgentId
+    ? agentBinOverrides[selectedAgentId]?.trim() || undefined
+    : undefined;
   const [templateId, setTemplateId] = useState(TEMPLATES[0]!.id);
   const [name, setName] = useState(defaultReportName(setupView.project.name));
   const [audience, setAudience] = useState("HR leadership");
@@ -60,6 +70,9 @@ export function ReportSetupPage({
           language,
           goal,
           includedInsightIds: Array.from(included),
+          ...(selectedAgent && !selectedAgent.unsupported ? { agent: selectedAgent.id } : {}),
+          ...(selectedModel !== "default" ? { model: selectedModel } : {}),
+          ...(selectedBinOverride ? { binOverride: selectedBinOverride } : {}),
         }),
       });
       const payload = (await res.json()) as { error?: string };
@@ -119,6 +132,12 @@ export function ReportSetupPage({
             Goal
             <textarea value={goal} onChange={(event) => setGoal(event.target.value)} />
           </label>
+          <p className="iis-generation-note">
+            Generation uses the top-bar CLI connection:
+            {" "}
+            <strong>{selectedAgent && !selectedAgent.unsupported ? selectedAgent.label : "Local draft fallback"}</strong>
+            {selectedAgent && selectedModel !== "default" && <span> · {selectedModel}</span>}
+          </p>
           {error && <p className="iis-form-error">{error}</p>}
           <button
             className="iis-button iis-button-primary"
@@ -126,7 +145,7 @@ export function ReportSetupPage({
             disabled={submitting || setupView.selectedRecords.length === 0}
             onClick={() => void generateReport()}
           >
-            <Sparkles size={18} /> {submitting ? "Generating..." : "Generate HTML Report"}
+            <Sparkles size={18} /> {submitting ? "Generating..." : selectedAgent ? "Generate with CLI" : "Generate Local Draft"}
           </button>
         </section>
 

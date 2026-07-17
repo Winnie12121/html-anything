@@ -405,6 +405,121 @@ a {
   color: var(--iis-muted);
 }
 
+.iis-button-muted.connected {
+  color: var(--iis-text);
+}
+
+.iis-button code {
+  border-radius: 4px;
+  background: var(--iis-surface-muted);
+  color: var(--iis-muted);
+  padding: 2px 5px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.iis-agent-connector {
+  position: relative;
+}
+
+.iis-agent-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  display: grid;
+  width: 320px;
+  gap: 12px;
+  border: 1px solid var(--iis-border);
+  border-radius: 8px;
+  background: var(--iis-surface);
+  padding: 14px;
+  box-shadow: 0 18px 40px rgba(16, 24, 40, 0.14);
+}
+
+.iis-agent-menu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.iis-agent-menu-head strong {
+  font-size: 13px;
+}
+
+.iis-agent-menu-head button,
+.iis-agent-list button {
+  border: 0;
+  background: transparent;
+  color: var(--iis-accent);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.iis-agent-list {
+  display: grid;
+  gap: 6px;
+}
+
+.iis-agent-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 6px;
+  color: var(--iis-text);
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.iis-agent-list button.active,
+.iis-agent-list button:hover {
+  background: var(--iis-accent-soft);
+}
+
+.iis-agent-list span {
+  display: grid;
+  gap: 3px;
+}
+
+.iis-agent-list small,
+.iis-agent-empty {
+  color: var(--iis-muted);
+  font-size: 12px;
+}
+
+.iis-agent-list em {
+  color: var(--iis-accent);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.iis-agent-model {
+  display: grid;
+  gap: 7px;
+  color: var(--iis-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.iis-agent-model select {
+  min-height: 34px;
+  border: 1px solid var(--iis-border);
+  border-radius: 6px;
+  background: var(--iis-surface);
+  color: var(--iis-text);
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .iis-button-danger {
   border-color: transparent;
   background: transparent;
@@ -950,6 +1065,21 @@ a {
   color: #b42318;
   font-size: 13px;
   line-height: 1.4;
+}
+
+.iis-generation-note {
+  margin: 0;
+  border: 1px solid var(--iis-border);
+  border-radius: 6px;
+  background: var(--iis-surface-muted);
+  color: var(--iis-muted);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.iis-generation-note strong {
+  color: var(--iis-text);
 }
 
 .iis-modal-actions {

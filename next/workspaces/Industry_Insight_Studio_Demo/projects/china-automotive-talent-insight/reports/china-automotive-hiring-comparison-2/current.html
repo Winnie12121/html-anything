@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>China Automotive Hiring Comparison</title>
+<style>
+  :root {
+    --bg: #f9fafb;
+    --card-bg: #ffffff;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --table-stripe: #f8fafc;
+    --bar-bosch: #2563eb;
+    --bar-continental: #7c3aed;
+    --bar-autosar: #0891b2;
+    --bar-cpp: #2563eb;
+    --bar-python: #7c3aed;
+    --bar-ros2: #d97706;
+    --bar-embedded: #059669;
+    --bar-shanghai: #2563eb;
+    --bar-suzhou: #7c3aed;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 40px 24px;
+  }
+  .report {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .report-header {
+    margin-bottom: 40px;
+    padding-bottom: 28px;
+    border-bottom: 2px solid var(--border);
+  }
+  .report-header .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .report-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .report-header .meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .report-header .meta span { margin-right: 16px; }
+  .report-header .meta strong { color: var(--text); }
+
+  section {
+    margin-bottom: 36px;
+  }
+  section h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+  }
+
+  /* Metric tiles */
+  .metric-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .metric-tile {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .metric-tile .value {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+  .metric-tile .label-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    padding: 10px 14px;
+    border-bottom: 2px solid var(--border);
+    background: var(--table-stripe);
+  }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* Skill bar in table */
+  .skill-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .skill-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .skill-bar .fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s;
+  }
+
+  /* Chart */
+  .chart-wrap { margin-top: 8px; }
+  .chart-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .chart-label {
+    width: 110px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    flex-shrink: 0;
+    text-align: right;
+    padding-right: 12px;
+  }
+  .chart-bar-track {
+    flex: 1;
+    height: 28px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .chart-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    min-width: 40px;
+  }
+  .chart-bar-fill.zero {
+    background: var(--border);
+    color: var(--text-muted);
+    justify-content: center;
+    padding-right: 0;
+    min-width: 20px;
+  }
+
+  /* Supporting text */
+  .supporting {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 12px;
+    line-height: 1.7;
+  }
+  .caveat {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 8px;
+  }
+
+  /* Sources list */
+  .source-list { list-style: none; }
+  .source-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .source-list li:last-child { border-bottom: none; }
+  .source-list .src-kind {
+    display: inline-block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: var(--accent-light);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-right: 8px;
+    font-weight: 600;
+  }
+  .source-list .src-title { font-weight: 600; color: var(--text); }
+  .source-list .src-summary { color: var(--text-secondary); display: block; margin-top: 2px; }
+
+  /* Small note */
+  .note {
+    font-size: 12px;
+    color: var(--text-muted);
+    border-left: 3px solid var(--border);
+    padding-left: 12px;
+    margin-top: 20px;
+  }
+
+  @media (max-width: 600px) {
+    .metric-row { grid-template-columns: 1fr; }
+    .chart-label { width: 80px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="report">
+
+  <!-- Header -->
+  <header class="report-header">
+    <div class="label">Industry Insight Studio · Automotive · China</div>
+    <h1>China Automotive Hiring Comparison</h1>
+    <div class="meta">
+      <span>Audience: <strong>HR leadership</strong></span>
+      <span>Language: <strong>English</strong></span>
+      <span>Date: <strong>July 2026</strong></span>
+    </div>
+  </header>
+
+  <!-- Executive Summary -->
+  <section data-section-id="executive-summary">
+    <h2>Executive Summary</h2>
+    <div class="card">
+      <p class="supporting">
+        This report compares hiring activity for two major Tier‑1 automotive suppliers in China — <strong>Bosch</strong> and <strong>Continental</strong> — based on a small sample of open roles collected in July 2026. Both companies are actively recruiting for software-defined vehicle capabilities, with roles spanning ADAS perception engineering and embedded systems development. Market context signals confirm sustained investment in software talent across China's automotive sector.
+      </p>
+      <p class="supporting">
+        Key findings:
+        The sample covers <strong>2 roles</strong> across <strong>2 companies</strong> in <strong>2 cities</strong> (Shanghai and Suzhou).
+        <strong>AUTOSAR</strong> is the only skill appearing in both job postings, suggesting it remains a common requirement for automotive embedded and ADAS roles in China.
+        Hiring is concentrated in the Yangtze River Delta, with Bosch recruiting in Shanghai and Continental in Suzhou — consistent with the region's established automotive supply chain.
+      </p>
+      <p class="caveat">
+        This report is based on a limited sample of 2 job postings and 3 market-context sources. All figures are illustrative; broader data collection is needed for statistically meaningful conclusions.
+      </p>
+    </div>
+  </section>
+
+  <!-- Hiring volume metric -->
+  <section data-section-id="metric-job-volume">
+    <h2>Hiring Volume and Company Coverage</h2>
+    <div class="card">
+      <div class="metric-row">
+        <div class="metric-tile">
+          <div class="value">2</div>
+          <div class="label-text">Active Job Postings</div>
+        </div>
+        <div class="metric-tile">
+          <div class="value">2</div>
+          <div class="label-text">Companies Hiring</div>
+        </div>
+      </div>
+      <p class="supporting">
+        The sampled roles are one <strong>ADAS Software Engineer</strong> at Bosch (Shanghai) and one <strong>Embedded Developer</strong> at Continental (Suzhou). Both represent mid-to-senior technical positions in core automotive software domains.
+      </p>
+    </div>
+  </section>
+
+  <!-- Company comparison chart -->
+  <section data-section-id="chart-company-comparison">
+    <h2>Hiring Activity by Company</h2>
+    <div class="card">
+      <div class="chart-wrap">
+        <div class="chart-row">
+          <div class="chart-label">Bosch</div>
+          <div class="chart-bar-track">
+            <div class="chart-bar-fill" style="width:100%;background:var(--bar-bosch);">1</div>
+          </div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-label">Continental</div>
+          <div class="chart-bar-track">
+            <div class="chart-bar-fill" style="width:100%;background:var(--bar-continental);">1</div>
+          </div>
+        </div>
+      </div>
+      <p class="supporting">
+        In this sample, Bosch and Continental each contribute one open role, reflecting equal representation rather than a measured difference in hiring volume. Both roles target software engineering talent — Bosch on the ADAS/perception side, Continental on embedded control systems.
+      </p>
+      <p class="caveat">Sample size is too small to infer relative hiring intensity between the two companies.</p>
+    </div>
+  </section>
+
+  <!-- Skill demand table -->
+  <section data-section-id="table-skill-demand">
+    <h2>Skill Demand Signals</h2>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Skill</th>
+            <th class="num">Records Mentioning</th>
+            <th>Demand Indicator</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>AUTOSAR</strong></td>
+            <td class="num">2</td>
+            <td>
+              <div class="skill-bar-wrap">
+                <div class="skill-bar"><div class="fill" style="width:100%;background:var(--bar-autosar);"></div></div>
+                <span style="font-size:12px;color:var(--text-secondary);">Present in both roles</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>C++</td>
+            <td class="num">1</td>
+            <td>
+              <div class="skill-bar-wrap">
+                <div class="skill-bar"><div class="fill" style="width:50%;background:var(--bar-cpp);"></div></div>
+                <span style="font-size:12px;color:var(--text-secondary);">Bosch ADAS role</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>Python</td>
+            <td class="num">1</td>
+            <td>
+              <div class="skill-bar-wrap">
+                <div class="skill-bar"><div class="fill" style="width:50%;background:var(--bar-python);"></div></div>
+                <span style="font-size:12px;color:var(--text-secondary);">Bosch ADAS role</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>ROS2</td>
+            <td class="num">1</td>
+            <td>
+              <div class="skill-bar-wrap">
+                <div class="skill-bar"><div class="fill" style="width:50%;background:var(--bar-ros2);"></div></div>
+                <span style="font-size:12px;color:var(--text-secondary);">Bosch ADAS role</span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>Embedded C</td>
+            <td class="num">1</td>
+            <td>
+              <div class="skill-bar-wrap">
+                <div class="skill-bar"><div class="fill" style="width:50%;background:var(--bar-embedded);"></div></div>
+                <span style="font-size:12px;color:var(--text-secondary);">Continental role</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="supporting">
+        <strong>AUTOSAR</strong> is the standout common skill — it appears in both the Bosch ADAS role and the Continental embedded role, reflecting the standardisation of AUTOSAR across China's automotive software ecosystem. The ADAS role at Bosch also calls for C++, Python, and ROS2, indicating a modern perception-and-robotics stack. Continental's embedded role emphasises Embedded C alongside AUTOSAR and Linux.
+      </p>
+      <p class="caveat">
+        Skill demand indicators are based on keyword presence in job descriptions, not on weighted demand scoring. Linux was mentioned in the Continental posting but was not included in the suggested insights configuration for this table.
+      </p>
+    </div>
+  </section>
+
+  <!-- Geographic distribution -->
+  <section data-section-id="chart-location-distribution">
+    <h2>Geographic Distribution</h2>
+    <div class="card">
+      <div class="chart-wrap">
+        <div class="chart-row">
+          <div class="chart-label">Shanghai</div>
+          <div class="chart-bar-track">
+            <div class="chart-bar-fill" style="width:100%;background:var(--bar-shanghai);">1</div>
+          </div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-label">Suzhou</div>
+          <div class="chart-bar-track">
+            <div class="chart-bar-fill" style="width:100%;background:var(--bar-suzhou);">1</div>
+          </div>
+        </div>
+      </div>
+      <p class="supporting">
+        Both roles are located in the <strong>Yangtze River Delta</strong> — Bosch's ADAS role is in Shanghai, and Continental's embedded role is in Suzhou. This cluster aligns with the region's deep automotive supply chain, R&amp;D centres, and proximity to major OEM headquarters. Shanghai and Suzhou are within 100&nbsp;km of each other, forming a contiguous talent market.
+      </p>
+      <p class="caveat">Only two locations are represented in the current sample; no conclusions about broader geographic concentration can be drawn.</p>
+    </div>
+  </section>
+
+  <!-- Sources -->
+  <section data-section-id="sources">
+    <h2>Sources</h2>
+    <div class="card">
+      <ul class="source-list">
+        <li>
+          <span class="src-kind">Job</span>
+          <span class="src-title">ADAS Software Engineer — Bosch (Shanghai)</span>
+          <span class="src-summary">Bosch hiring signal for ADAS perception and embedded software. Skills: C++, AUTOSAR, Python, ROS2.</span>
+        </li>
+        <li>
+          <span class="src-kind">Job</span>
+          <span class="src-title">Embedded Developer — Continental (Suzhou)</span>
+          <span class="src-summary">Continental embedded software role in China. Skills: Embedded C, AUTOSAR, Linux.</span>
+        </li>
+        <li>
+          <span class="src-kind">Web Page</span>
+          <span class="src-title">China automotive software market brief</span>
+          <span class="src-summary">Mock imported page for industry context. Topic: Market Context, Region: China.</span>
+        </li>
+        <li>
+          <span class="src-kind">Web Page</span>
+          <span class="src-title">China automotive software market brief</span>
+          <span class="src-summary">Mock imported page for industry context. Topic: Market Context, Region: China.</span>
+        </li>
+        <li>
+          <span class="src-kind">Web Page</span>
+          <span class="src-title">China automotive software market brief</span>
+          <span class="src-summary">Mock imported page for industry context. Topic: Market Context, Region: China.</span>
+        </li>
+      </ul>
+      <p class="note">
+        All sources are mock records from the Industry Insight Studio workspace. URLs are illustrative. Data collected for July 2026 reporting cycle.
+      </p>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

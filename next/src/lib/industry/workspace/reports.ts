@@ -33,6 +33,7 @@ export type CreateWorkspaceReportInput = {
   language: string;
   goal: string;
   includedInsightIds: string[];
+  generatedHtml?: string;
 };
 
 export type CreateWorkspaceReportResult = {
@@ -48,6 +49,71 @@ export type AddWorkspaceReportCommentInput = {
   sectionId: string;
   text: string;
 };
+
+export async function buildWorkspaceReportGenerationPrompt(
+  projectSlug: string,
+  input: CreateWorkspaceReportInput,
+  root?: string,
+): Promise<string> {
+  const setup = await readWorkspaceReportSetup(projectSlug, root);
+  const includedIds = new Set(input.includedInsightIds);
+  const includedInsights = setup.suggestedInsights.filter((insight) =>
+    includedIds.has(insight.id),
+  );
+  const sectionPlan = buildSections(includedInsights, setup.selectedRecords);
+  const records = setup.selectedRecords.slice(0, 80);
+  const recordPayload = records.map((record) => ({
+    ref: record.ref,
+    kind: record.kind,
+    title: record.title,
+    summary: record.summary,
+    fields: record.fields,
+    rawText: record.rawText.slice(0, 1600),
+    url: record.url,
+  }));
+
+  return `You are generating an editable business insight report for Industry Insight Studio.
+
+Hard requirements:
+- Output one complete standalone single-page HTML document only.
+- Do not split sections into separate files.
+- Do not use markdown fences and do not add explanatory text.
+- First non-whitespace characters must be <!doctype html> or <!DOCTYPE html>.
+- The document must include all CSS inside <style> tags and should work when opened directly from disk.
+- Do not use external images. Use tables, inline SVG, or CSS for visuals.
+- Use professional research-workspace styling: neutral background, subtle borders, dense readable tables, restrained accent color.
+- Every report section must be represented inside this same HTML file.
+- Include data-section-id attributes that match the section plan below.
+- Do not invent facts beyond the selected records. If evidence is limited, say so plainly.
+
+Project:
+${JSON.stringify({
+  name: setup.project.name,
+  industry: setup.project.industry,
+  region: setup.project.region,
+  tags: setup.project.tags,
+}, null, 2)}
+
+Report metadata:
+${JSON.stringify({
+  name: input.name,
+  templateId: input.templateId,
+  audience: input.audience,
+  language: input.language,
+  goal: input.goal,
+}, null, 2)}
+
+Section plan:
+${JSON.stringify(sectionPlan, null, 2)}
+
+Suggested insights to include:
+${JSON.stringify(includedInsights, null, 2)}
+
+Selected records:
+${JSON.stringify(recordPayload, null, 2)}
+
+Return only the final HTML document.`;
+}
 
 export async function readWorkspaceReportSetup(
   projectSlug: string,
@@ -250,12 +316,13 @@ export async function createWorkspaceReport(
   await writeTextFile(
     workspaceRoot,
     `${reportDir}/current.html`,
-    renderStandaloneReportHtml({
-      project: setup.project,
-      report,
-      selectedRecords: setup.selectedRecords,
-      insights: includedInsights,
-    }),
+    input.generatedHtml?.trim() ||
+      renderStandaloneReportHtml({
+        project: setup.project,
+        report,
+        selectedRecords: setup.selectedRecords,
+        insights: includedInsights,
+      }),
   );
 
   const project = await readJsonFile<WorkspaceProject>(
