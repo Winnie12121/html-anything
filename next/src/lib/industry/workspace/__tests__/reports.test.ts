@@ -8,11 +8,15 @@ import {
 } from "../bootstrap";
 import { readJsonFile } from "../fs";
 import {
+  addWorkspaceReportComment,
   createWorkspaceReport,
   readWorkspaceReportSetup,
+  readWorkspaceReportStudio,
   readWorkspaceReports,
+  resolveWorkspaceReportComment,
+  saveWorkspaceReportHtml,
 } from "../reports";
-import type { WorkspaceReportMetadata } from "../schema";
+import type { WorkspaceReportComment, WorkspaceReportMetadata } from "../schema";
 
 describe("workspace reports", () => {
   let root: string;
@@ -81,5 +85,75 @@ describe("workspace reports", () => {
 
     const reports = await readWorkspaceReports(DEMO_PROJECT_SLUG, root);
     expect(reports.reports.some((report) => report.slug === result.reportSlug)).toBe(true);
+  });
+
+  it("loads and saves report studio HTML from current.html", async () => {
+    await ensureDemoWorkspace(root);
+    const { reportSlug } = await createWorkspaceReport(
+      DEMO_PROJECT_SLUG,
+      {
+        name: "Editable Studio Report",
+        templateId: "executive-industry-brief",
+        audience: "Strategy team",
+        language: "English",
+        goal: "Prepare an editable report.",
+        includedInsightIds: ["metric-job-volume"],
+      },
+      root,
+    );
+
+    const studio = await readWorkspaceReportStudio(DEMO_PROJECT_SLUG, reportSlug, root);
+    expect(studio.html).toContain("Editable Studio Report");
+    expect(studio.report.currentHtmlPath).toBe("current.html");
+
+    await saveWorkspaceReportHtml(
+      DEMO_PROJECT_SLUG,
+      reportSlug,
+      { html: "<!doctype html><html><body><h1>Edited</h1></body></html>" },
+      root,
+    );
+
+    const nextStudio = await readWorkspaceReportStudio(DEMO_PROJECT_SLUG, reportSlug, root);
+    expect(nextStudio.html).toContain("<h1>Edited</h1>");
+  });
+
+  it("writes and resolves report comments in comments.json", async () => {
+    await ensureDemoWorkspace(root);
+    const { reportSlug } = await createWorkspaceReport(
+      DEMO_PROJECT_SLUG,
+      {
+        name: "Commented Studio Report",
+        templateId: "executive-industry-brief",
+        audience: "Strategy team",
+        language: "English",
+        goal: "Prepare comments.",
+        includedInsightIds: ["metric-job-volume"],
+      },
+      root,
+    );
+
+    const comment = await addWorkspaceReportComment(
+      DEMO_PROJECT_SLUG,
+      reportSlug,
+      {
+        sectionId: "executive-summary",
+        text: "Make the opening sharper.",
+      },
+      root,
+    );
+    expect(comment.resolved).toBe(false);
+
+    await resolveWorkspaceReportComment(DEMO_PROJECT_SLUG, reportSlug, comment.id, root);
+    const comments = await readJsonFile<WorkspaceReportComment[]>(
+      root,
+      `projects/${DEMO_PROJECT_SLUG}/reports/${reportSlug}/comments.json`,
+    );
+    expect(comments).toMatchObject([
+      {
+        id: comment.id,
+        sectionId: "executive-summary",
+        resolved: true,
+      },
+    ]);
   });
 });

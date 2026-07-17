@@ -4,6 +4,8 @@ import {
   listDirectories,
   pathExists,
   readJsonFile,
+  readJsonlFile,
+  readTextFile,
   writeJsonFile,
   writeTextFile,
 } from "./fs";
@@ -14,10 +16,15 @@ import type {
   WorkspaceDataRecord,
   WorkspaceReportListItem,
   WorkspaceReportSetupView,
+  WorkspaceReportStudioView,
   WorkspaceReportsView,
   WorkspaceSuggestedInsight,
 } from "./client";
-import type { WorkspaceProject, WorkspaceReportMetadata } from "./schema";
+import type {
+  WorkspaceProject,
+  WorkspaceReportComment,
+  WorkspaceReportMetadata,
+} from "./schema";
 
 export type CreateWorkspaceReportInput = {
   name: string;
@@ -31,6 +38,15 @@ export type CreateWorkspaceReportInput = {
 export type CreateWorkspaceReportResult = {
   report: WorkspaceReportMetadata;
   reportSlug: string;
+};
+
+export type SaveWorkspaceReportHtmlInput = {
+  html: string;
+};
+
+export type AddWorkspaceReportCommentInput = {
+  sectionId: string;
+  text: string;
 };
 
 export async function readWorkspaceReportSetup(
@@ -63,6 +79,119 @@ export async function readWorkspaceReports(
     counts: { ...projectSummary.counts, reports: reports.length },
     reports,
   };
+}
+
+export async function readWorkspaceReportStudio(
+  projectSlug: string,
+  reportSlug: string,
+  root?: string,
+): Promise<WorkspaceReportStudioView> {
+  const workspaceRoot = root ?? (await configuredWorkspaceRoot());
+  const projectSummary = await readWorkspaceProject(projectSlug, workspaceRoot);
+  const report = await readJsonFile<WorkspaceReportMetadata>(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, "report.json"),
+  );
+  const [html, comments, selectedRecords, suggestedInsights] = await Promise.all([
+    readTextFile(workspaceRoot, reportPath(projectSlug, reportSlug, report.currentHtmlPath)),
+    readReportComments(workspaceRoot, projectSlug, reportSlug),
+    readSelectedRecords(workspaceRoot, projectSlug, reportSlug),
+    readSuggestedInsights(workspaceRoot, projectSlug, reportSlug),
+  ]);
+
+  return {
+    project: projectSummary.project,
+    counts: projectSummary.counts,
+    report,
+    html,
+    comments,
+    selectedRecords,
+    suggestedInsights,
+  };
+}
+
+export async function saveWorkspaceReportHtml(
+  projectSlug: string,
+  reportSlug: string,
+  input: SaveWorkspaceReportHtmlInput,
+  root?: string,
+): Promise<WorkspaceReportMetadata> {
+  const workspaceRoot = root ?? (await configuredWorkspaceRoot());
+  const report = await readJsonFile<WorkspaceReportMetadata>(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, "report.json"),
+  );
+  const now = new Date().toISOString();
+  const nextReport: WorkspaceReportMetadata = {
+    ...report,
+    updatedAt: now,
+  };
+
+  await writeTextFile(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, report.currentHtmlPath),
+    input.html,
+  );
+  await writeJsonFile(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, "report.json"),
+    nextReport,
+  );
+  await touchProject(workspaceRoot, projectSlug, now);
+
+  return nextReport;
+}
+
+export async function addWorkspaceReportComment(
+  projectSlug: string,
+  reportSlug: string,
+  input: AddWorkspaceReportCommentInput,
+  root?: string,
+): Promise<WorkspaceReportComment> {
+  const workspaceRoot = root ?? (await configuredWorkspaceRoot());
+  const comments = await readReportComments(workspaceRoot, projectSlug, reportSlug);
+  const now = new Date().toISOString();
+  const comment: WorkspaceReportComment = {
+    id: `comment-${Date.now().toString(36)}`,
+    sectionId: input.sectionId,
+    text: input.text.trim(),
+    resolved: false,
+    createdAt: now,
+  };
+
+  await writeJsonFile(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, "comments.json"),
+    [...comments, comment],
+  );
+  await touchReportAndProject(workspaceRoot, projectSlug, reportSlug, now);
+
+  return comment;
+}
+
+export async function resolveWorkspaceReportComment(
+  projectSlug: string,
+  reportSlug: string,
+  commentId: string,
+  root?: string,
+): Promise<WorkspaceReportComment[]> {
+  const workspaceRoot = root ?? (await configuredWorkspaceRoot());
+  const now = new Date().toISOString();
+  const comments = await readReportComments(workspaceRoot, projectSlug, reportSlug);
+  const nextComments = comments.map((comment) =>
+    comment.id === commentId
+      ? { ...comment, resolved: true, updatedAt: now }
+      : comment,
+  );
+
+  await writeJsonFile(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, "comments.json"),
+    nextComments,
+  );
+  await touchReportAndProject(workspaceRoot, projectSlug, reportSlug, now);
+
+  return nextComments;
 }
 
 export async function createWorkspaceReport(
@@ -140,6 +269,87 @@ export async function createWorkspaceReport(
   );
 
   return { report, reportSlug };
+}
+
+async function readReportComments(
+  root: string,
+  projectSlug: string,
+  reportSlug: string,
+): Promise<WorkspaceReportComment[]> {
+  try {
+    return await readJsonFile<WorkspaceReportComment[]>(
+      root,
+      reportPath(projectSlug, reportSlug, "comments.json"),
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return [];
+  }
+}
+
+async function readSelectedRecords(
+  root: string,
+  projectSlug: string,
+  reportSlug: string,
+): Promise<WorkspaceDataRecord[]> {
+  try {
+    return await readJsonlFile<WorkspaceDataRecord>(
+      root,
+      reportPath(projectSlug, reportSlug, "input/selected-records.jsonl"),
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return [];
+  }
+}
+
+async function readSuggestedInsights(
+  root: string,
+  projectSlug: string,
+  reportSlug: string,
+): Promise<WorkspaceSuggestedInsight[]> {
+  try {
+    return await readJsonFile<WorkspaceSuggestedInsight[]>(
+      root,
+      reportPath(projectSlug, reportSlug, "derived/suggested-insights.json"),
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return [];
+  }
+}
+
+async function touchReportAndProject(
+  root: string,
+  projectSlug: string,
+  reportSlug: string,
+  updatedAt: string,
+): Promise<void> {
+  const report = await readJsonFile<WorkspaceReportMetadata>(
+    root,
+    reportPath(projectSlug, reportSlug, "report.json"),
+  );
+  await writeJsonFile(
+    root,
+    reportPath(projectSlug, reportSlug, "report.json"),
+    { ...report, updatedAt },
+  );
+  await touchProject(root, projectSlug, updatedAt);
+}
+
+async function touchProject(
+  root: string,
+  projectSlug: string,
+  updatedAt: string,
+): Promise<void> {
+  const project = await readJsonFile<WorkspaceProject>(
+    root,
+    projectPath(projectSlug, "project.json"),
+  );
+  await writeJsonFile(root, projectPath(projectSlug, "project.json"), {
+    ...project,
+    updatedAt,
+  });
 }
 
 async function readReportMetadataList(

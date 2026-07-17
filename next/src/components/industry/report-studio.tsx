@@ -1,143 +1,218 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  ArrowDown,
-  ArrowUp,
   Code2,
   Download,
   FileText,
   MessageSquare,
   Save,
-  Trash2,
 } from "lucide-react";
 import { previewHtml } from "@/lib/extract-html";
-import { useIndustryStore } from "@/lib/industry/store";
+import type {
+  WorkspaceReportComment,
+  WorkspaceReportStudioView,
+} from "@/lib/industry/workspace/client";
 import { AppTopBar, ProjectSidebar } from "./shell";
 
 export function ReportStudioPage({
   projectId,
   reportId,
+  studioView,
 }: {
   projectId: string;
   reportId: string;
+  studioView: WorkspaceReportStudioView;
 }) {
-  const report = useIndustryStore((s) => s.reports.find((r) => r.id === reportId));
-  const setActiveSection = useIndustryStore((s) => s.setActiveReportSection);
-  const activeSectionId = useIndustryStore((s) => s.activeReportSectionId);
+  const router = useRouter();
   const [leftTab, setLeftTab] = useState<"outline" | "sources" | "charts">("outline");
   const [rightTab, setRightTab] = useState<"edit" | "comment" | "refine">("edit");
   const [previewMode, setPreviewMode] = useState<"preview" | "html">("preview");
+  const [activeSectionId, setActiveSectionId] = useState(
+    studioView.report.sections[0]?.id ?? "document",
+  );
+  const [html, setHtml] = useState(studioView.html);
+  const [comments, setComments] = useState(studioView.comments);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState(studioView.report.updatedAt);
 
-  const activeSection = useMemo(() => {
-    if (!report) return undefined;
-    return report.sections.find((section) => section.id === activeSectionId) ?? report.sections[0];
-  }, [activeSectionId, report]);
+  const activeSection = useMemo(
+    () =>
+      studioView.report.sections.find((section) => section.id === activeSectionId) ??
+      studioView.report.sections[0],
+    [activeSectionId, studioView.report.sections],
+  );
+  const commentsBySection = useMemo(() => {
+    const map = new Map<string, WorkspaceReportComment[]>();
+    for (const comment of comments) {
+      const items = map.get(comment.sectionId) ?? [];
+      items.push(comment);
+      map.set(comment.sectionId, items);
+    }
+    return map;
+  }, [comments]);
 
-  if (!report) {
-    return (
-      <main className="iis-app">
-        <AppTopBar projectId={projectId} section="Report Studio" />
-        <div className="iis-missing">
-          <h1>Report not found</h1>
-          <Link className="iis-button iis-button-primary" href={`/projects/${projectId}/reports`}>
-            Back to reports
-          </Link>
-        </div>
-      </main>
-    );
+  async function saveHtml() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/reports/${reportId}/html`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ html }),
+      });
+      const payload = (await res.json()) as { updatedAt?: string; error?: string };
+      if (!res.ok) throw new Error(payload.error ?? "Failed to save HTML");
+      setSavedAt(payload.updatedAt ?? new Date().toISOString());
+      router.refresh();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <main className="iis-app">
-      <AppTopBar projectId={projectId} section="Report Studio" />
+      <AppTopBar
+        projectId={projectId}
+        projectName={studioView.project.name}
+        section="Report Studio"
+      />
       <div className="iis-studio-frame">
-        <ProjectSidebar projectId={projectId} />
+        <ProjectSidebar
+          projectId={projectId}
+          counts={studioView.counts}
+        />
         <aside className="iis-studio-left">
           <div className="iis-tabs-flat">
             {(["outline", "sources", "charts"] as const).map((tab) => (
-              <button key={tab} className={leftTab === tab ? "active" : ""} onClick={() => setLeftTab(tab)} type="button">
+              <button
+                key={tab}
+                className={leftTab === tab ? "active" : ""}
+                onClick={() => setLeftTab(tab)}
+                type="button"
+              >
                 {tab[0]!.toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
           {leftTab === "outline" && (
             <div className="iis-outline">
-              {report.sections
+              {studioView.report.sections
                 .slice()
                 .sort((a, b) => a.order - b.order)
-                .map((section) => (
-                  <button
-                    key={section.id}
-                    className={activeSection?.id === section.id ? "active" : ""}
-                    onClick={() => setActiveSection(section.id)}
-                    type="button"
-                  >
-                    <span>::</span>
-                    {section.title}
-                    {section.comments.some((c) => !c.resolved) && <em><MessageSquare size={15} /> {section.comments.filter((c) => !c.resolved).length}</em>}
-                  </button>
-                ))}
+                .map((section) => {
+                  const openCount = (commentsBySection.get(section.id) ?? []).filter(
+                    (comment) => !comment.resolved,
+                  ).length;
+                  return (
+                    <button
+                      key={section.id}
+                      className={activeSection?.id === section.id ? "active" : ""}
+                      onClick={() => setActiveSectionId(section.id)}
+                      type="button"
+                    >
+                      <span>::</span>
+                      {section.title}
+                      {openCount > 0 && (
+                        <em>
+                          <MessageSquare size={15} /> {openCount}
+                        </em>
+                      )}
+                    </button>
+                  );
+                })}
             </div>
           )}
-          {leftTab === "sources" && <StudioSources reportId={reportId} />}
-          {leftTab === "charts" && <StudioCharts />}
+          {leftTab === "sources" && <StudioSources studioView={studioView} />}
+          {leftTab === "charts" && <StudioCharts studioView={studioView} />}
         </aside>
 
         <section className="iis-studio-preview">
           <div className="iis-studio-preview-toolbar">
             <div className="iis-tabs-flat">
-              <button className={previewMode === "preview" ? "active" : ""} onClick={() => setPreviewMode("preview")} type="button">
-                <FileText size={17} /> Edit
+              <button
+                className={previewMode === "preview" ? "active" : ""}
+                onClick={() => setPreviewMode("preview")}
+                type="button"
+              >
+                <FileText size={17} /> Preview
               </button>
-              <button className={previewMode === "html" ? "active" : ""} onClick={() => setPreviewMode("html")} type="button">
+              <button
+                className={previewMode === "html" ? "active" : ""}
+                onClick={() => setPreviewMode("html")}
+                type="button"
+              >
                 <Code2 size={17} /> HTML
               </button>
             </div>
-            <button className="iis-button iis-button-muted" type="button">Claude Code</button>
+            <button
+              className="iis-button iis-button-primary"
+              type="button"
+              disabled={saving}
+              onClick={() => void saveHtml()}
+            >
+              <Save size={17} /> {saving ? "Saving..." : "Save HTML"}
+            </button>
           </div>
           {previewMode === "preview" ? (
-            <iframe title={report.name} srcDoc={previewHtml(report.html)} className="iis-report-iframe" />
+            <iframe
+              title={studioView.report.name}
+              srcDoc={previewHtml(html)}
+              className="iis-report-iframe"
+            />
           ) : (
-            <HtmlEditor reportId={report.id} html={report.html} />
+            <textarea
+              className="iis-html-editor"
+              value={html}
+              onChange={(event) => setHtml(event.target.value)}
+              spellCheck={false}
+            />
           )}
         </section>
 
         <aside className="iis-studio-right">
           <div className="iis-tabs-flat">
             {(["edit", "comment", "refine"] as const).map((tab) => (
-              <button key={tab} className={rightTab === tab ? "active" : ""} onClick={() => setRightTab(tab)} type="button">
+              <button
+                key={tab}
+                className={rightTab === tab ? "active" : ""}
+                onClick={() => setRightTab(tab)}
+                type="button"
+              >
                 {tab[0]!.toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
           {activeSection && rightTab === "edit" && (
-            <SectionEditPanel reportId={report.id} sectionId={activeSection.id} />
+            <SectionEditPanel section={activeSection} />
           )}
           {activeSection && rightTab === "comment" && (
-            <CommentPanel reportId={report.id} sectionId={activeSection.id} />
+            <CommentPanel
+              projectId={projectId}
+              reportId={reportId}
+              sectionId={activeSection.id}
+              comments={comments}
+              onCommentsChange={setComments}
+            />
           )}
           {activeSection && rightTab === "refine" && (
-            <RefinePanel reportId={report.id} sectionId={activeSection.id} />
+            <RefinePanel sectionTitle={activeSection.title} />
           )}
         </aside>
       </div>
       <div className="iis-studio-footer">
-        <span>Saved 1 min ago</span>
-        <button className="iis-button iis-button-ghost" type="button">Snapshot</button>
+        <span>
+          Saved {new Date(savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </span>
+        {saveError && <span className="iis-selection-error">{saveError}</span>}
         <button
           className="iis-button iis-button-primary"
           type="button"
-          onClick={() => {
-            const blob = new Blob([report.html], { type: "text/html" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `${report.name.replace(/\W+/g, "-").toLowerCase() || "report"}.html`;
-            link.click();
-            URL.revokeObjectURL(url);
-          }}
+          onClick={() => exportHtml(studioView.report.name, html)}
         >
           <Download size={18} /> Export HTML
         </button>
@@ -146,133 +221,177 @@ export function ReportStudioPage({
   );
 }
 
-function StudioSources({ reportId }: { reportId: string }) {
-  const report = useIndustryStore((s) => s.reports.find((r) => r.id === reportId));
-  const allItems = useIndustryStore((s) => s.dataItems);
-  const items = useMemo(
-    () => allItems.filter((item) => report?.selectedItemIds.includes(item.id)),
-    [allItems, report],
-  );
+function StudioSources({ studioView }: { studioView: WorkspaceReportStudioView }) {
   return (
     <div className="iis-studio-list">
-      {items.map((item) => (
-        <p key={item.id}><FileText size={16} /> {item.title}</p>
-      ))}
+      {studioView.selectedRecords.length ? (
+        studioView.selectedRecords.map((record) => (
+          <p key={record.ref}>
+            <FileText size={16} /> {record.title}
+          </p>
+        ))
+      ) : (
+        <p>No captured source records.</p>
+      )}
     </div>
   );
 }
 
-function StudioCharts() {
+function StudioCharts({ studioView }: { studioView: WorkspaceReportStudioView }) {
+  const insights = studioView.suggestedInsights.filter((insight) => insight.included);
   return (
     <div className="iis-studio-list">
-      <p>Hiring activity by company</p>
-      <p>Top skills in demand</p>
-      <p>Geographic distribution</p>
+      {insights.length ? (
+        insights.map((insight) => <p key={insight.id}>{insight.title}</p>)
+      ) : (
+        <p>No suggested insights were included.</p>
+      )}
     </div>
   );
 }
 
-function HtmlEditor({ reportId, html }: { reportId: string; html: string }) {
-  const setReportHtml = useIndustryStore((s) => s.setReportHtml);
-  return (
-    <textarea
-      className="iis-html-editor"
-      value={html}
-      onChange={(event) => setReportHtml(reportId, event.target.value)}
-      spellCheck={false}
-    />
-  );
-}
-
-function SectionEditPanel({ reportId, sectionId }: { reportId: string; sectionId: string }) {
-  const report = useIndustryStore((s) => s.reports.find((r) => r.id === reportId));
-  const update = useIndustryStore((s) => s.updateReportSection);
-  const move = useIndustryStore((s) => s.moveReportSection);
-  const remove = useIndustryStore((s) => s.deleteReportSection);
-  const section = report?.sections.find((s) => s.id === sectionId);
-  if (!section) return null;
+function SectionEditPanel({
+  section,
+}: {
+  section: WorkspaceReportStudioView["report"]["sections"][number];
+}) {
   return (
     <div className="iis-panel-stack">
       <h2>{section.title}</h2>
-      <p>Click directly in the report to edit text inline. Changes auto-save on blur.</p>
+      <p>
+        Edit the standalone HTML document in the center pane. This section is
+        identified by <code>{section.selector}</code>.
+      </p>
       <div className="iis-format-box">
-        <strong>Formatting</strong>
-        <div>
-          <button type="button">B</button>
-          <button type="button"><i>I</i></button>
-          <button type="button">↗</button>
-          <button type="button">≡</button>
-        </div>
-      </div>
-      <label>
-        Section Content
-        <textarea value={section.html} onChange={(event) => update(reportId, sectionId, event.target.value)} />
-      </label>
-      <div className="iis-section-actions">
-        <button className="iis-icon-button" onClick={() => move(reportId, sectionId, "up")} type="button" aria-label="Move up"><ArrowUp size={18} /></button>
-        <button className="iis-icon-button" onClick={() => move(reportId, sectionId, "down")} type="button" aria-label="Move down"><ArrowDown size={18} /></button>
-        <button className="iis-icon-button danger" onClick={() => remove(reportId, sectionId)} type="button" aria-label="Delete section"><Trash2 size={18} /></button>
+        <strong>Related data</strong>
+        <p>{section.sourceRecordRefs.length} source records linked in metadata.</p>
       </div>
     </div>
   );
 }
 
-function CommentPanel({ reportId, sectionId }: { reportId: string; sectionId: string }) {
-  const report = useIndustryStore((s) => s.reports.find((r) => r.id === reportId));
-  const add = useIndustryStore((s) => s.addSectionComment);
-  const resolve = useIndustryStore((s) => s.resolveComment);
-  const section = report?.sections.find((s) => s.id === sectionId);
+function CommentPanel({
+  projectId,
+  reportId,
+  sectionId,
+  comments,
+  onCommentsChange,
+}: {
+  projectId: string;
+  reportId: string;
+  sectionId: string;
+  comments: WorkspaceReportComment[];
+  onCommentsChange: (comments: WorkspaceReportComment[]) => void;
+}) {
+  const router = useRouter();
   const [text, setText] = useState("");
-  if (!section) return null;
+  const [error, setError] = useState<string | null>(null);
+  const sectionComments = comments.filter((comment) => comment.sectionId === sectionId);
+
+  async function addComment() {
+    if (!text.trim()) return;
+    setError(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/reports/${reportId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sectionId, text }),
+      });
+      const payload = (await res.json()) as {
+        comment?: WorkspaceReportComment;
+        error?: string;
+      };
+      if (!res.ok || !payload.comment) throw new Error(payload.error ?? "Failed to add comment");
+      onCommentsChange([...comments, payload.comment]);
+      setText("");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function resolveComment(commentId: string) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/reports/${reportId}/comments`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId }),
+      });
+      const payload = (await res.json()) as {
+        comments?: WorkspaceReportComment[];
+        error?: string;
+      };
+      if (!res.ok || !payload.comments) {
+        throw new Error(payload.error ?? "Failed to resolve comment");
+      }
+      onCommentsChange(payload.comments);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   return (
     <div className="iis-panel-stack">
       <h2>Comments</h2>
-      {section.comments.map((comment) => (
-        <div key={comment.id} className="iis-comment">
-          <p>{comment.text}</p>
-          {!comment.resolved && <button className="iis-link-button" type="button" onClick={() => resolve(reportId, sectionId, comment.id)}>Resolve</button>}
-        </div>
-      ))}
-      <textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Add a comment to this section" />
-      <button
-        className="iis-button iis-button-primary"
-        type="button"
-        onClick={() => {
-          if (!text.trim()) return;
-          add(reportId, sectionId, text.trim());
-          setText("");
-        }}
-      >
+      {sectionComments.length ? (
+        sectionComments.map((comment) => (
+          <div key={comment.id} className="iis-comment">
+            <p>{comment.text}</p>
+            {!comment.resolved ? (
+              <button
+                className="iis-link-button"
+                type="button"
+                onClick={() => void resolveComment(comment.id)}
+              >
+                Resolve
+              </button>
+            ) : (
+              <small>Resolved</small>
+            )}
+          </div>
+        ))
+      ) : (
+        <p>No comments on this section.</p>
+      )}
+      <textarea
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder="Add a comment to this section"
+      />
+      {error && <p className="iis-form-error">{error}</p>}
+      <button className="iis-button iis-button-primary" type="button" onClick={() => void addComment()}>
         <Save size={18} /> Add Comment
       </button>
     </div>
   );
 }
 
-function RefinePanel({ reportId, sectionId }: { reportId: string; sectionId: string }) {
-  const report = useIndustryStore((s) => s.reports.find((r) => r.id === reportId));
-  const update = useIndustryStore((s) => s.updateReportSection);
-  const section = report?.sections.find((s) => s.id === sectionId);
-  const [instruction, setInstruction] = useState("Make this section more executive-ready and quantify the implication.");
-  if (!section) return null;
+function RefinePanel({ sectionTitle }: { sectionTitle: string }) {
   return (
     <div className="iis-panel-stack">
       <h2>Refine Selected Section</h2>
-      <p>Refinement is scoped to this section and its related data.</p>
-      <textarea value={instruction} onChange={(event) => setInstruction(event.target.value)} />
-      <button
-        className="iis-button iis-button-primary"
-        type="button"
-        onClick={() =>
-          update(
-            reportId,
-            sectionId,
-            `${section.html}<p><strong>Refinement note:</strong> ${instruction}</p>`,
-          )
-        }
-      >
+      <p>
+        Refinement for "{sectionTitle}" will be connected to the CLI generation
+        path in the next generation milestone.
+      </p>
+      <textarea
+        defaultValue="Make this section more executive-ready and quantify the implication."
+      />
+      <button className="iis-button iis-button-primary" type="button" disabled>
         Refine Section
       </button>
     </div>
   );
+}
+
+function exportHtml(name: string, html: string) {
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${name.replace(/\W+/g, "-").toLowerCase() || "report"}.html`;
+  link.click();
+  URL.revokeObjectURL(url);
 }

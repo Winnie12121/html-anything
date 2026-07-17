@@ -1,5 +1,6 @@
 import type {
   WorkspaceProject,
+  WorkspaceReportComment,
   WorkspaceReportMetadata,
   WorkspaceRunManifest,
   WorkspaceSelectionManifest,
@@ -8,6 +9,7 @@ import type {
 
 export type {
   WorkspaceProject,
+  WorkspaceReportComment,
   WorkspaceReportMetadata,
   WorkspaceRunManifest,
   WorkspaceSelectionManifest,
@@ -90,6 +92,16 @@ export type WorkspaceReportsView = {
   project: WorkspaceProject;
   counts: WorkspaceProjectCounts;
   reports: WorkspaceReportListItem[];
+};
+
+export type WorkspaceReportStudioView = {
+  project: WorkspaceProject;
+  counts: WorkspaceProjectCounts;
+  report: WorkspaceReportMetadata;
+  html: string;
+  comments: WorkspaceReportComment[];
+  selectedRecords: WorkspaceDataRecord[];
+  suggestedInsights: WorkspaceSuggestedInsight[];
 };
 
 export function formatWorkspaceDataKind(kind: WorkspaceDataKind): string {
