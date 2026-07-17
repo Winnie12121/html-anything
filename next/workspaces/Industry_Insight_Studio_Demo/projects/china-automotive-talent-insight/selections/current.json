@@ -4,8 +4,11 @@
   "selectedRecordRefs": [
     "sources/external/normalized/jobs.jsonl#job-001",
     "sources/external/normalized/jobs.jsonl#job-002",
-    "sources/external/normalized/news.jsonl#news-001"
+    "sources/external/normalized/news.jsonl#news-001",
+    "sources/external/normalized/webpages.jsonl#run-20260717-002-webpage-market-brief",
+    "sources/external/normalized/webpages.jsonl#run-20260717-001-webpage-market-brief"
   ],
   "selectedFileRefs": [],
-  "createdAt": "2026-07-16T10:00:00.000Z"
+  "createdAt": "2026-07-16T10:00:00.000Z",
+  "updatedAt": "2026-07-17T02:23:15.429Z"
 }

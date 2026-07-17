@@ -54,6 +54,7 @@ export type WorkspaceSelectionManifest = {
   selectedRecordRefs: string[];
   selectedFileRefs: string[];
   createdAt: string;
+  updatedAt?: string;
 };
 
 export type WorkspaceReportMetadata = {

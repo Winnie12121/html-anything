@@ -1511,6 +1511,10 @@ a {
   color: var(--iis-muted);
 }
 
+.iis-selection-error {
+  color: var(--iis-red);
+}
+
 /* Reports and setup */
 .iis-report-list {
   display: grid;

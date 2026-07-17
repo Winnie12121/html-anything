@@ -1,5 +1,7 @@
 export * from "./bootstrap";
+export * from "./client";
 export * from "./config";
+export * from "./data";
 export * from "./fs";
 export * from "./overview";
 export * from "./paths";

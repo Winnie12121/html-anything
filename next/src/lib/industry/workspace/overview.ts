@@ -3,23 +3,15 @@ import { projectPath } from "./paths";
 import {
   configuredWorkspaceRoot,
   readWorkspaceProject,
-  type WorkspaceProjectSummary,
 } from "./projects";
+import type {
+  WorkspaceActivityItem,
+  WorkspaceOverview,
+} from "./client";
 import type {
   WorkspaceRunManifest,
   WorkspaceReportMetadata,
 } from "./schema";
-
-export type WorkspaceActivityItem = {
-  id: string;
-  label: string;
-  tone: "success" | "info" | "warning" | "danger";
-  createdAt: string;
-};
-
-export type WorkspaceOverview = WorkspaceProjectSummary & {
-  activity: WorkspaceActivityItem[];
-};
 
 export async function readWorkspaceOverview(
   projectSlug: string,

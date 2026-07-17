@@ -15,18 +15,10 @@ import {
   type WorkspaceProject,
   type WorkspaceSourceConfig,
 } from "./schema";
-
-export type WorkspaceProjectCounts = {
-  companies: number;
-  dataItems: number;
-  reports: number;
-  sources: number;
-};
-
-export type WorkspaceProjectSummary = {
-  project: WorkspaceProject;
-  counts: WorkspaceProjectCounts;
-};
+import type {
+  WorkspaceProjectCounts,
+  WorkspaceProjectSummary,
+} from "./client";
 
 export type CreateWorkspaceProjectInput = {
   name: string;

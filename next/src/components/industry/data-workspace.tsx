@@ -1,211 +1,330 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, FileText, Image, Search } from "lucide-react";
-import { formatKindLabel } from "@/lib/industry/selection";
-import { getProjectSelection, useIndustryStore } from "@/lib/industry/store";
-import type { DataItem, DataKind } from "@/lib/industry/types";
+import { useRouter } from "next/navigation";
+import { Database, ExternalLink, FileText, Image, Search } from "lucide-react";
+import type {
+  WorkspaceDataKind,
+  WorkspaceDataRecord,
+  WorkspaceDataView,
+} from "@/lib/industry/workspace/client";
+import { formatWorkspaceDataKind } from "@/lib/industry/workspace/client";
 import { ProjectShell } from "./shell";
 
-export function DataWorkspacePage({ projectId }: { projectId: string }) {
-  const state = useIndustryStore((s) => s);
-  const items = state.dataItems.filter((item) => item.projectId === projectId);
-  const sources = state.sources.filter((source) => source.projectId === projectId);
-  const selectedSourceId = state.selectedDataSourceId;
-  const activeItem = items.find((item) => item.id === state.activeDataItemId) ?? items[0];
-  const selection = getProjectSelection(state, projectId);
+type SourceFilter = "all" | WorkspaceDataKind;
+
+export function DataWorkspacePage({
+  projectId,
+  dataView,
+}: {
+  projectId: string;
+  dataView?: WorkspaceDataView;
+}) {
+  const router = useRouter();
+  const [selectedSourceId, setSelectedSourceId] = useState<SourceFilter>("all");
+  const [activeRecordId, setActiveRecordId] = useState<string | undefined>(
+    dataView?.records[0]?.id,
+  );
+  const [selectedRefs, setSelectedRefs] = useState<string[]>(
+    dataView?.selection.selectedRecordRefs ?? [],
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!dataView) {
+    return (
+      <ProjectShell projectId={projectId} section="Data">
+        <div className="iis-missing">
+          <h1>Project data not found</h1>
+        </div>
+      </ProjectShell>
+    );
+  }
+
+  const selectedSet = new Set(selectedRefs);
   const filtered =
     selectedSourceId === "all"
-      ? items
-      : items.filter((item) => item.sourceId === selectedSourceId || item.kind === selectedSourceId);
+      ? dataView.records
+      : dataView.records.filter((record) => record.kind === selectedSourceId);
+  const activeRecord =
+    dataView.records.find((record) => record.id === activeRecordId) ??
+    filtered[0] ??
+    dataView.records[0];
+  const selectedCounts = countSelectedByKind(dataView.records, selectedSet);
+
+  async function persistSelection(nextRefs: string[]) {
+    setSelectedRefs(nextRefs);
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/selections/current`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selectedRecordRefs: nextRefs }),
+      });
+      const payload = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(payload.error ?? "Selection save failed");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggleRecord(ref: string) {
+    const next = selectedSet.has(ref)
+      ? selectedRefs.filter((item) => item !== ref)
+      : [...selectedRefs, ref];
+    void persistSelection(next);
+  }
 
   return (
-    <ProjectShell projectId={projectId} section="Data">
-      <div className="-m-[38px_48px_68px] grid h-[calc(100vh-52px)] min-h-[620px] grid-cols-[260px_minmax(420px,1fr)_340px] overflow-hidden bg-white">
-        <aside className="min-w-0 overflow-auto border-r border-[var(--iis-border)] bg-white py-5">
-          <h2 className="mx-5 mb-4 mt-0 text-[17px] font-semibold">Data Sources</h2>
-          <button
-            className={`grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-5 py-2.5 text-left ${
-              selectedSourceId === "all" ? "bg-[#eef6ff] text-[var(--iis-text)]" : "text-[var(--iis-muted)]"
-            }`}
-            onClick={() => state.setSelectedDataSource("all")}
-            type="button"
-          >
-            <span className="text-[14px] font-semibold">▦ All Data</span>
-            <em className="text-[14px] not-italic">{items.length}</em>
-            <small className="col-start-2 text-[12px] text-[var(--iis-accent)]">{selection.selectedItemIds.length} sel</small>
-          </button>
+    <ProjectShell
+      projectId={projectId}
+      projectName={dataView.project.name}
+      counts={dataView.counts}
+      section="Data"
+    >
+      <div className="iis-data-shell">
+        <aside className="iis-data-sources">
+          <h2>Data Sources</h2>
+          <DataSourceButton
+            active={selectedSourceId === "all"}
+            label="All Data"
+            count={dataView.sourceCounts.all}
+            selectedCount={selectedRefs.length}
+            icon={<Database size={16} />}
+            onClick={() => setSelectedSourceId("all")}
+          />
           <DataSourceGroup title="External">
-            <SourceButton sourceId="job" label="Jobs" kind="job" projectId={projectId} />
-            <SourceButton sourceId="news" label="News" kind="news" projectId={projectId} />
-            <SourceButton sourceId="web_page" label="Web Pages" kind="web_page" projectId={projectId} />
+            <DataSourceButton
+              active={selectedSourceId === "job"}
+              label="Jobs"
+              count={dataView.sourceCounts.job}
+              selectedCount={selectedCounts.job}
+              icon={<FileText size={16} />}
+              onClick={() => setSelectedSourceId("job")}
+            />
+            <DataSourceButton
+              active={selectedSourceId === "news"}
+              label="News"
+              count={dataView.sourceCounts.news}
+              selectedCount={selectedCounts.news}
+              icon={<FileText size={16} />}
+              onClick={() => setSelectedSourceId("news")}
+            />
+            <DataSourceButton
+              active={selectedSourceId === "web_page"}
+              label="Web Pages"
+              count={dataView.sourceCounts.web_page}
+              selectedCount={selectedCounts.web_page}
+              icon={<ExternalLink size={16} />}
+              onClick={() => setSelectedSourceId("web_page")}
+            />
           </DataSourceGroup>
           <DataSourceGroup title="Uploaded">
-            {sources
-              .filter((source) => source.type === "upload")
-              .map((source) => (
-                <button
-                  key={source.id}
-                  className={`grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-5 py-2.5 text-left ${
-                    selectedSourceId === source.id ? "bg-[#eef6ff] text-[var(--iis-text)]" : "text-[var(--iis-muted)]"
-                  }`}
-                  onClick={() => state.setSelectedDataSource(source.id)}
-                  type="button"
-                >
-                  <span className="flex items-center gap-2 text-[14px] font-semibold"><FileText size={16} /> Uploaded Files</span>
-                  <em className="text-[14px] not-italic">{items.filter((item) => item.sourceId === source.id).length}</em>
-                  <small className="col-start-2 text-[12px] text-[var(--iis-accent)]">
-                    {items.filter((item) => selection.selectedItemIds.includes(item.id) && item.sourceId === source.id).length} sel
-                  </small>
-                </button>
-              ))}
-            <SourceButton sourceId="pdf_page" label="PDF Pages" kind="pdf_page" projectId={projectId} />
-            <SourceButton sourceId="image" label="Images" kind="image" projectId={projectId} />
+            <DataSourceButton
+              active={false}
+              label="Uploaded Files"
+              count={0}
+              selectedCount={0}
+              icon={<Image size={16} />}
+              onClick={() => {}}
+            />
           </DataSourceGroup>
         </aside>
 
-        <section className="flex min-w-0 flex-col border-r border-[var(--iis-border)] bg-white">
-          <div className="border-b border-[var(--iis-border)] px-6 py-5">
-            <h1 className="m-0 text-[22px] font-semibold">{selectedSourceId === "all" ? "All Data" : titleForSource(selectedSourceId)}</h1>
-            <p className="mt-2 text-[14px] text-[var(--iis-muted)]">{filtered.length} records</p>
+        <section className="iis-data-preview">
+          <div className="iis-page-header">
+            <div>
+              <h1>{selectedSourceId === "all" ? "All Data" : formatWorkspaceDataKind(selectedSourceId)}</h1>
+              <p>{filtered.length} records</p>
+            </div>
           </div>
-          <div className="grid grid-cols-[44px_180px_auto] gap-2 border-b border-[var(--iis-border)] px-6 py-3">
-            <button className="grid place-items-center rounded-md border border-[var(--iis-border)] bg-white text-[var(--iis-muted)]" type="button"><Search size={18} /></button>
-            <select className="rounded-md border border-[var(--iis-border)] bg-white px-3 text-[14px]" defaultValue="all">
+          <div className="iis-data-toolbar">
+            <button className="iis-search-button" type="button" aria-label="Search">
+              <Search size={18} />
+            </button>
+            <select defaultValue="all">
               <option value="all">All</option>
               <option value="selected">Selected</option>
-              <option value="jobs">Jobs</option>
             </select>
             <button className="iis-button iis-button-ghost" type="button">More Filters</button>
           </div>
-          <StructuredRecordsTable projectId={projectId} items={filtered} activeItemId={activeItem?.id} />
+          <StructuredRecordsTable
+            records={filtered}
+            activeRecordId={activeRecord?.id}
+            selectedRefs={selectedSet}
+            onActivate={setActiveRecordId}
+            onToggle={toggleRecord}
+          />
         </section>
 
-        <DataDetailsPanel projectId={projectId} item={activeItem} />
+        <DataDetailsPanel
+          record={activeRecord}
+          checked={activeRecord ? selectedSet.has(activeRecord.ref) : false}
+          onToggle={() => activeRecord && toggleRecord(activeRecord.ref)}
+        />
       </div>
-      <SelectionSummaryBar projectId={projectId} />
+      <SelectionSummaryBar
+        projectId={projectId}
+        selectedCount={selectedRefs.length}
+        counts={selectedCounts}
+        saving={saving}
+        error={error}
+      />
     </ProjectShell>
   );
 }
 
-function DataSourceGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function DataSourceGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
-      <h3 className="mx-5 mb-2 mt-5 text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--iis-muted)]">{title}</h3>
+    <div className="iis-data-source-group">
+      <h3>{title}</h3>
       {children}
     </div>
   );
 }
 
-function SourceButton({
-  sourceId,
+function DataSourceButton({
+  active,
   label,
-  kind,
-  projectId,
+  count,
+  selectedCount,
+  icon,
+  onClick,
 }: {
-  sourceId: string;
+  active: boolean;
   label: string;
-  kind: DataKind;
-  projectId: string;
+  count: number;
+  selectedCount: number;
+  icon: React.ReactNode;
+  onClick: () => void;
 }) {
-  const state = useIndustryStore((s) => s);
-  const items = state.dataItems.filter((item) => item.projectId === projectId && item.kind === kind);
-  const selection = getProjectSelection(state, projectId);
   return (
-    <button
-      className={`grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-5 py-2.5 text-left ${
-        state.selectedDataSourceId === sourceId ? "bg-[#eef6ff] text-[var(--iis-text)]" : "text-[var(--iis-muted)]"
-      }`}
-      onClick={() => state.setSelectedDataSource(sourceId)}
-      type="button"
-    >
-      <span className="flex items-center gap-2 text-[14px] font-semibold">{kind === "image" ? <Image size={16} /> : <FileText size={16} />} {label}</span>
-      <em className="text-[14px] not-italic">{items.length}</em>
-      <small className="col-start-2 text-[12px] text-[var(--iis-accent)]">{items.filter((item) => selection.selectedItemIds.includes(item.id)).length} sel</small>
+    <button className={active ? "active" : ""} onClick={onClick} type="button">
+      <span>{icon} {label}</span>
+      <em>{count}</em>
+      <small>{selectedCount} sel</small>
     </button>
   );
 }
 
 function StructuredRecordsTable({
-  projectId,
-  items,
-  activeItemId,
+  records,
+  activeRecordId,
+  selectedRefs,
+  onActivate,
+  onToggle,
 }: {
-  projectId: string;
-  items: DataItem[];
-  activeItemId?: string;
+  records: WorkspaceDataRecord[];
+  activeRecordId?: string;
+  selectedRefs: Set<string>;
+  onActivate: (recordId: string) => void;
+  onToggle: (ref: string) => void;
 }) {
-  const state = useIndustryStore((s) => s);
-  const selection = getProjectSelection(state, projectId);
   return (
-    <table className="w-full border-collapse bg-white text-[14px]">
+    <table className="iis-data-table">
       <thead>
         <tr>
-          <th className="w-10 bg-[#fafbfc] px-5 py-3 text-left text-[12px] uppercase tracking-wide text-[var(--iis-muted)]"><input type="checkbox" aria-label="Select all" /></th>
-          <th className="bg-[#fafbfc] px-4 py-3 text-left text-[12px] uppercase tracking-wide text-[var(--iis-muted)]">Title</th>
-          <th className="bg-[#fafbfc] px-4 py-3 text-left text-[12px] uppercase tracking-wide text-[var(--iis-muted)]">Company</th>
-          <th className="bg-[#fafbfc] px-4 py-3 text-left text-[12px] uppercase tracking-wide text-[var(--iis-muted)]">Location</th>
-          <th className="bg-[#fafbfc] px-4 py-3 text-left text-[12px] uppercase tracking-wide text-[var(--iis-muted)]">Kind</th>
+          <th><input type="checkbox" aria-label="Select all" /></th>
+          <th>Title</th>
+          <th>Company</th>
+          <th>Location</th>
+          <th>Kind</th>
         </tr>
       </thead>
       <tbody>
-        {items.map((item) => {
-          const checked = selection.selectedItemIds.includes(item.id);
-          return (
-            <tr key={item.id} className={`cursor-pointer border-b border-[var(--iis-border)] ${activeItemId === item.id ? "bg-[#eef6ff]" : ""}`} onClick={() => state.setActiveDataItem(item.id)}>
-              <td className="w-10 px-5 py-3">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(event) => {
-                    event.stopPropagation();
-                    state.toggleDataSelection(projectId, item.id);
-                  }}
-                  onClick={(event) => event.stopPropagation()}
-                  aria-label={`Select ${item.title}`}
-                />
-              </td>
-              <td className="px-4 py-3"><strong className="block text-[14px]">{item.title}</strong><small className="block max-w-[380px] truncate text-[12px] text-[var(--iis-muted)]">{item.summary}</small></td>
-              <td className="px-4 py-3">{String(item.fields.company ?? "-")}</td>
-              <td className="px-4 py-3">{String(item.fields.location ?? "-")}</td>
-              <td className="px-4 py-3">{formatKindLabel(item.kind)}</td>
-            </tr>
-          );
-        })}
+        {records.length ? (
+          records.map((record) => {
+            const checked = selectedRefs.has(record.ref);
+            return (
+              <tr
+                key={record.ref}
+                className={activeRecordId === record.id ? "active" : ""}
+                onClick={() => onActivate(record.id)}
+              >
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(event) => {
+                      event.stopPropagation();
+                      onToggle(record.ref);
+                    }}
+                    onClick={(event) => event.stopPropagation()}
+                    aria-label={`Select ${record.title}`}
+                  />
+                </td>
+                <td>
+                  <strong>{record.title}</strong>
+                  <small>{record.summary}</small>
+                </td>
+                <td>{String(record.fields.company ?? "-")}</td>
+                <td>{String(record.fields.location ?? record.fields.region ?? "-")}</td>
+                <td>{formatWorkspaceDataKind(record.kind)}</td>
+              </tr>
+            );
+          })
+        ) : (
+          <tr>
+            <td colSpan={5}>No data collected yet.</td>
+          </tr>
+        )}
       </tbody>
     </table>
   );
 }
 
-function DataDetailsPanel({ projectId, item }: { projectId: string; item?: DataItem }) {
-  const state = useIndustryStore((s) => s);
-  const selection = getProjectSelection(state, projectId);
-  if (!item) {
-    return <aside className="min-w-0 overflow-auto bg-white p-6"><p>Select a data item to preview details.</p></aside>;
+function DataDetailsPanel({
+  record,
+  checked,
+  onToggle,
+}: {
+  record?: WorkspaceDataRecord;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  if (!record) {
+    return (
+      <aside className="iis-data-details">
+        <p>Select a data item to preview details.</p>
+      </aside>
+    );
   }
-  const checked = selection.selectedItemIds.includes(item.id);
+
   return (
-    <aside className="min-w-0 overflow-auto bg-white p-6">
+    <aside className="iis-data-details">
       <div className="iis-tabs-flat">
         <button className="active" type="button">Details</button>
         <button type="button">Raw</button>
       </div>
-      <h2>{item.title}</h2>
-      <p>{String(item.fields.company ?? formatKindLabel(item.kind))} · {String(item.fields.location ?? "Project data")}</p>
+      <h2>{record.title}</h2>
+      <p>{String(record.fields.company ?? formatWorkspaceDataKind(record.kind))} · {String(record.fields.location ?? record.fields.region ?? "Project data")}</p>
       <dl>
-        <dt>Source</dt>
-        <dd>{item.url ?? item.fileRef ?? item.sourceId}</dd>
-        {Object.entries(item.fields).map(([key, value]) => (
+        <div>
+          <dt>Source</dt>
+          <dd>{record.url ?? record.sourceId}</dd>
+        </div>
+        {Object.entries(record.fields).map(([key, value]) => (
           <div key={key}>
             <dt>{key}</dt>
             <dd>{Array.isArray(value) ? value.join(", ") : String(value ?? "-")}</dd>
           </div>
         ))}
       </dl>
-      <h3>{item.kind === "job" ? "Job Description" : "Preview"}</h3>
-      <p>{item.rawText}</p>
-      {item.url && (
-        <a className="iis-open-source" href={item.url} target="_blank" rel="noreferrer">
+      <h3>{record.kind === "job" ? "Job Description" : "Preview"}</h3>
+      <p>{record.rawText}</p>
+      {record.url && (
+        <a className="iis-open-source" href={record.url} target="_blank" rel="noreferrer">
           <ExternalLink size={18} /> Open Source
         </a>
       )}
@@ -213,7 +332,7 @@ function DataDetailsPanel({ projectId, item }: { projectId: string; item?: DataI
         <input
           type="checkbox"
           checked={checked}
-          onChange={() => state.toggleDataSelection(projectId, item.id)}
+          onChange={onToggle}
         />
         Include in Report
       </label>
@@ -221,17 +340,30 @@ function DataDetailsPanel({ projectId, item }: { projectId: string; item?: DataI
   );
 }
 
-function SelectionSummaryBar({ projectId }: { projectId: string }) {
-  const state = useIndustryStore((s) => s);
-  const selection = getProjectSelection(state, projectId);
-  const counts = Object.entries(selection.countsByKind);
+function SelectionSummaryBar({
+  projectId,
+  selectedCount,
+  counts,
+  saving,
+  error,
+}: {
+  projectId: string;
+  selectedCount: number;
+  counts: Record<WorkspaceDataKind, number>;
+  saving: boolean;
+  error: string | null;
+}) {
   return (
     <div className="iis-selection-bar">
-      <strong>{selection.selectedItemIds.length} items selected</strong>
+      <strong>{selectedCount} items selected</strong>
       <div>
-        {counts.map(([kind, count]) => (
-          <span key={kind}>{count} {formatKindLabel(kind as DataKind)}</span>
-        ))}
+        {Object.entries(counts)
+          .filter(([, count]) => count > 0)
+          .map(([kind, count]) => (
+            <span key={kind}>{count} {formatWorkspaceDataKind(kind as WorkspaceDataKind)}</span>
+          ))}
+        {saving && <span>Saving...</span>}
+        {error && <span className="iis-selection-error">{error}</span>}
       </div>
       <Link className="iis-button iis-button-ghost" href={`/projects/${projectId}/reports/new`}>
         Review Selection
@@ -243,11 +375,15 @@ function SelectionSummaryBar({ projectId }: { projectId: string }) {
   );
 }
 
-function titleForSource(sourceId: string) {
-  if (sourceId === "job") return "Jobs";
-  if (sourceId === "news") return "News";
-  if (sourceId === "web_page") return "Web Pages";
-  if (sourceId === "pdf_page") return "PDF Pages";
-  if (sourceId === "image") return "Images";
-  return "Uploaded Files";
+function countSelectedByKind(
+  records: WorkspaceDataRecord[],
+  selectedRefs: Set<string>,
+): Record<WorkspaceDataKind, number> {
+  return records.reduce<Record<WorkspaceDataKind, number>>(
+    (acc, record) => {
+      if (selectedRefs.has(record.ref)) acc[record.kind] += 1;
+      return acc;
+    },
+    { job: 0, news: 0, web_page: 0 },
+  );
 }

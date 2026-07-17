@@ -7,7 +7,7 @@ import { relativeTime } from "@/lib/industry/format";
 import type {
   WorkspaceRunManifest,
   WorkspaceSourcesView,
-} from "@/lib/industry/workspace";
+} from "@/lib/industry/workspace/client";
 import {
   ProjectShell,
   SourceIcon,

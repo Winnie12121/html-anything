@@ -1,4 +1,5 @@
 import { DataWorkspacePage } from "@/components/industry/data-workspace";
+import { readWorkspaceData } from "@/lib/industry/workspace";
 
 export default async function Page({
   params,
@@ -6,5 +7,6 @@ export default async function Page({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  return <DataWorkspacePage projectId={projectId} />;
+  const dataView = await readWorkspaceData(projectId).catch(() => undefined);
+  return <DataWorkspacePage projectId={projectId} dataView={dataView} />;
 }

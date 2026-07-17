@@ -8,18 +8,12 @@ import {
 } from "./fs";
 import { projectPath } from "./paths";
 import { configuredWorkspaceRoot, readWorkspaceProject } from "./projects";
+import type { WorkspaceSourcesView } from "./client";
 import type {
   WorkspaceProject,
   WorkspaceRunManifest,
   WorkspaceSourceConfig,
 } from "./schema";
-
-export type WorkspaceSourcesView = {
-  project: WorkspaceProject;
-  counts: Awaited<ReturnType<typeof readWorkspaceProject>>["counts"];
-  sourceConfig: WorkspaceSourceConfig;
-  runs: WorkspaceRunManifest[];
-};
 
 export type MockCollectionResult = {
   run: WorkspaceRunManifest;

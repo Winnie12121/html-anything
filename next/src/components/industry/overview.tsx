@@ -13,7 +13,7 @@ import { relativeTime } from "@/lib/industry/format";
 import type {
   WorkspaceActivityItem,
   WorkspaceOverview,
-} from "@/lib/industry/workspace";
+} from "@/lib/industry/workspace/client";
 
 export function OverviewPage({
   projectId,

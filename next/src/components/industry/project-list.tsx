@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Building2, Clock, Database, FileText, Plus } from "lucide-react";
 import { AppTopBar, AppLogo } from "./shell";
 import { relativeTime } from "@/lib/industry/format";
-import type { WorkspaceProjectSummary } from "@/lib/industry/workspace";
+import type { WorkspaceProjectSummary } from "@/lib/industry/workspace/client";
 
 export function ProjectListPage({
   projects,

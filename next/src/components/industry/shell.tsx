@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { getProjectCounts, useIndustryStore } from "@/lib/industry/store";
 import { relativeTime } from "@/lib/industry/format";
-import type { WorkspaceProjectCounts } from "@/lib/industry/workspace";
+import type { WorkspaceProjectCounts } from "@/lib/industry/workspace/client";
 
 export function AppLogo() {
   return (
