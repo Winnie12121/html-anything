@@ -19,7 +19,7 @@
           }
         ]
       },
-      "lastRunId": "RUN-20260716-001"
+      "lastRunId": "RUN-20260717-002"
     },
     {
       "id": "liepin",
@@ -46,7 +46,7 @@
           "ADAS talent demand"
         ]
       },
-      "lastRunId": "RUN-20260716-001"
+      "lastRunId": "RUN-20260717-002"
     },
     {
       "id": "manual-urls",
@@ -56,7 +56,8 @@
       "enabled": true,
       "config": {
         "urls": []
-      }
+      },
+      "lastRunId": "RUN-20260717-002"
     }
   ]
 }
