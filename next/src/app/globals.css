@@ -1561,8 +1561,8 @@ a {
 /* Data workspace */
 .iis-data-shell {
   display: grid;
-  height: calc(100vh - 120px);
-  height: calc(100dvh - 120px);
+  height: calc(100vh - 52px);
+  height: calc(100dvh - 52px);
   min-height: 0;
   grid-template-columns: 300px minmax(420px, 1fr) 360px;
   margin: -38px -48px -68px;
@@ -1643,6 +1643,7 @@ a {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding-bottom: 74px;
 }
 
 .iis-data-preview .iis-page-header {
@@ -1728,8 +1729,22 @@ a {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding-bottom: 88px;
+  padding-bottom: 20px;
   scroll-padding-bottom: 88px;
+}
+
+.iis-data-pagination {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  border-top: 1px solid var(--iis-border);
+  background: var(--iis-surface);
+  padding: 12px 24px;
+  color: var(--iis-muted);
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .iis-data-table tr {

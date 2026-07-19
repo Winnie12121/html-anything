@@ -10,15 +10,10 @@
       "config": {
         "companies": [
           "英飞凌",
-          "意法半导体",
           "德州仪器",
-          "恩智浦",
-          "瑞萨电子",
-          "安森美",
           "高通",
-          "博通",
-          "ADI",
-          "微芯科技"
+          "意法半导体",
+          "恩智浦"
         ],
         "keywords": [
           "半导体",
@@ -48,14 +43,14 @@
         "topics": [
           "英飞凌 中国 Automotive Semiconductor 招聘",
           "英飞凌 中国 Automotive Semiconductor 投资 研发中心",
-          "意法半导体 中国 Automotive Semiconductor 招聘",
-          "意法半导体 中国 Automotive Semiconductor 投资 研发中心",
           "德州仪器 中国 Automotive Semiconductor 招聘",
           "德州仪器 中国 Automotive Semiconductor 投资 研发中心",
+          "高通 中国 Automotive Semiconductor 招聘",
+          "高通 中国 Automotive Semiconductor 投资 研发中心",
+          "意法半导体 中国 Automotive Semiconductor 招聘",
+          "意法半导体 中国 Automotive Semiconductor 投资 研发中心",
           "恩智浦 中国 Automotive Semiconductor 招聘",
           "恩智浦 中国 Automotive Semiconductor 投资 研发中心",
-          "瑞萨电子 中国 Automotive Semiconductor 招聘",
-          "瑞萨电子 中国 Automotive Semiconductor 投资 研发中心",
           "Automotive Semiconductor 人才需求 中国",
           "Automotive Semiconductor 薪资 招聘趋势 中国"
         ]

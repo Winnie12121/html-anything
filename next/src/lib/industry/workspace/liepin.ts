@@ -15,6 +15,8 @@ type LiepinCsvRow = {
   post_date?: string;
   company_tags?: string;
   keyword?: string;
+  search_keyword?: string;
+  target_company?: string;
   crawl_time?: string;
 };
 
@@ -59,7 +61,7 @@ function liepinRowToRecord(
   const experience = clean(row.experience);
   const education = clean(row.education);
   const companyTags = clean(row.company_tags);
-  const keyword = clean(row.keyword);
+  const keyword = clean(row.keyword) || clean(row.search_keyword) || clean(row.target_company);
   const postDate = clean(row.post_date);
   const crawlTime = clean(row.crawl_time);
   const url = clean(row.job_url);

@@ -401,9 +401,9 @@ async function searchTavily(
     body: JSON.stringify({
       query,
       search_depth: "basic",
+      time_range: "month",
       max_results: 5,
       include_answer: "basic",
-      include_raw_content: "markdown",
     }),
   });
 
@@ -416,32 +416,30 @@ async function searchTavily(
 }
 
 function tavilyMarkdownReport(query: string, response: TavilySearchResponse): string {
+  const resultCount = response.results?.length ?? 0;
   const lines = [
-    `# Tavily Search Report: ${query}`,
+    `# Recruiting Intelligence Brief`,
     "",
-    `- Query: ${query}`,
-    `- Request ID: ${response.request_id ?? "-"}`,
-    `- Response time: ${response.response_time ?? "-"}s`,
-    `- Results: ${response.results?.length ?? 0}`,
+    `**Search topic:** ${query}`,
+    `**Time range:** Last month`,
+    `**Sources reviewed:** ${resultCount}`,
+    "",
+    "## Key Takeaways",
     "",
   ];
 
   if (response.answer) {
-    lines.push("## Answer", "", response.answer, "");
+    lines.push(...splitSummaryBullets(response.answer));
+  } else {
+    lines.push("- No direct answer was returned by Tavily.");
   }
 
-  lines.push("## Results", "");
+  lines.push("", "## Recruiting Notes", "");
+  lines.push(...recruitingNotes(query, response));
+
+  lines.push("", "## Evidence Highlights", "");
   for (const [index, result] of (response.results ?? []).entries()) {
-    lines.push(
-      `### ${index + 1}. ${result.title ?? "Untitled result"}`,
-      "",
-      `- URL: ${result.url ?? "-"}`,
-      `- Score: ${result.score ?? "-"}`,
-      result.published_date ? `- Published: ${result.published_date}` : "",
-      "",
-      result.raw_content ?? result.content ?? "",
-      "",
-    );
+    lines.push(...formatEvidenceHighlight(index, result));
   }
 
   return `${lines.filter((line) => line !== "").join("\n")}\n`;
@@ -469,15 +467,110 @@ function tavilyResponseToRecord(input: {
       requestId: input.response.request_id ?? null,
       responseTime: input.response.response_time ?? null,
     },
-    rawText: [
-      input.response.answer,
-      ...(input.response.results ?? []).map((result) =>
-        [result.title, result.url, result.content ?? result.raw_content].filter(Boolean).join("\n"),
-      ),
-    ].filter(Boolean).join("\n\n"),
+    rawText: tavilySummaryText(input.topic, input.response),
     url: topResult?.url,
     createdAt: input.createdAt,
   };
+}
+
+function tavilySummaryText(query: string, response: TavilySearchResponse): string {
+  return [
+    `Search topic: ${query}`,
+    `Time range: Last month`,
+    response.answer ? `Summary: ${response.answer}` : "",
+    ...recruitingNotes(query, response).map((note) => note.replace(/^- /, "Note: ")),
+  ].filter(Boolean).join("\n");
+}
+
+function splitSummaryBullets(value: string): string[] {
+  const sentences = value
+    .split(/(?<=[。！？.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  return (sentences.length ? sentences : [value]).map((sentence) => `- ${sentence}`);
+}
+
+function recruitingNotes(query: string, response: TavilySearchResponse): string[] {
+  const corpus = [
+    query,
+    response.answer,
+    ...(response.results ?? []).flatMap((result) => [result.title, result.content]),
+  ].filter(Boolean).join(" ").toLowerCase();
+  const notes: string[] = [];
+
+  if (/(招聘|职位|岗位|hiring|career|recruit|job|opening)/i.test(corpus)) {
+    notes.push("- Treat this as a hiring-demand signal; verify whether the roles are active before using it in outreach or market sizing.");
+  }
+  if (/(研发|研发中心|r&d|research|design|factory|plant|制造|产能|investment|投资|expansion|扩产)/i.test(corpus)) {
+    notes.push("- Treat this as an investment or footprint signal; connect it with job postings to infer likely team build-out.");
+  }
+  if (/(薪资|salary|compensation|pay|福利|benefit)/i.test(corpus)) {
+    notes.push("- Use compensation references as directional only; validate salary bands with fresh job postings before reporting.");
+  }
+
+  notes.push("- Prioritize evidence that mentions hiring volume, role families, locations, R&D expansion, or manufacturing footprint.");
+  return Array.from(new Set(notes)).slice(0, 4);
+}
+
+function formatSourceLink(result: NonNullable<TavilySearchResponse["results"]>[number]): string {
+  const title = result.title?.trim() || result.url || "Untitled source";
+  if (!result.url) return title;
+  return `[${title}](${result.url})`;
+}
+
+function formatEvidenceHighlight(
+  index: number,
+  result: NonNullable<TavilySearchResponse["results"]>[number],
+): string[] {
+  const sourceSummary = summarizeSource(result.content ?? result.raw_content ?? "");
+  const lines = [
+    `### ${index + 1}. ${result.title?.trim() || "Untitled source"}`,
+    "",
+    `- What it says: ${sourceSummary}`,
+    `- Recruiting relevance: ${sourceRecruitingRelevance(result)}`,
+    `- Source: ${formatSourceLink(result)}`,
+  ];
+  if (result.published_date) {
+    lines.splice(4, 0, `- Published: ${result.published_date}`);
+  }
+  return [...lines, ""];
+}
+
+function sourceRecruitingRelevance(result: NonNullable<TavilySearchResponse["results"]>[number]): string {
+  const text = [result.title, result.content, result.raw_content].filter(Boolean).join(" ");
+  if (/(招聘|职位|岗位|hiring|career|recruit|job|opening)/i.test(text)) {
+    return "Possible active hiring signal; check whether the listed roles are current and relevant to target functions.";
+  }
+  if (/(研发|研发中心|r&d|research|design|factory|plant|制造|产能|investment|投资|expansion|扩产)/i.test(text)) {
+    return "Footprint or investment signal; useful for inferring where future technical or operations hiring may grow.";
+  }
+  if (/(薪资|salary|compensation|pay|福利|benefit)/i.test(text)) {
+    return "Compensation signal; useful as directional context but should be validated against fresh job listings.";
+  }
+  return "Context signal; use it to support company background, market positioning, or outreach personalization.";
+}
+
+function summarizeSource(value: string): string {
+  const normalized = stripMarkdown(value)
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized) return "No concise source summary available.";
+  return truncateAtWord(normalized, 360);
+}
+
+function stripMarkdown(value: string): string {
+  return value
+    .replace(/!\[[^\]]*]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+    .replace(/[#>*_`~-]+/g, " ");
+}
+
+function truncateAtWord(value: string, limit: number): string {
+  if (value.length <= limit) return value;
+  const sliced = value.slice(0, limit);
+  const lastSpace = sliced.lastIndexOf(" ");
+  return `${sliced.slice(0, lastSpace > 300 ? lastSpace : limit).trim()}...`;
 }
 
 function topicSlug(topic: string): string {

@@ -28,15 +28,10 @@ export const DEMO_REPORT_SLUG = "china-automotive-hiring-comparison";
 const DEMO_NOW = "2026-07-16T10:00:00.000Z";
 const DEMO_TRACKED_COMPANIES = [
   "英飞凌",
-  "意法半导体",
   "德州仪器",
-  "恩智浦",
-  "瑞萨电子",
-  "安森美",
   "高通",
-  "博通",
-  "ADI",
-  "微芯科技",
+  "意法半导体",
+  "恩智浦",
 ];
 
 export async function ensureWorkspaceRoot(root: string): Promise<void> {
@@ -181,7 +176,7 @@ async function seedRuns(root: string): Promise<void> {
     progress: 100,
     startedAt: "2026-07-16T09:42:00.000Z",
     endedAt: "2026-07-16T09:47:00.000Z",
-    recordsCreated: 42,
+    recordsCreated: 150,
     warnings: [],
   };
 
@@ -191,7 +186,7 @@ async function seedRuns(root: string): Promise<void> {
     { at: "2026-07-16T09:47:00.000Z", message: "Collection completed" },
   ]);
   await seedJsonl(root, `${runDir}/logs.jsonl`, [
-    { level: "info", message: "Liepin CSV normalized 42 records" },
+    { level: "info", message: "Liepin CSV normalized 150 records" },
   ]);
 }
 

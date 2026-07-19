@@ -27,14 +27,14 @@ describe("workspace overview", () => {
 
     expect(overview.project.slug).toBe(DEMO_PROJECT_SLUG);
     expect(overview.counts).toEqual({
-      companies: 33,
-      dataItems: 42,
+      companies: 5,
+      dataItems: 150,
       reports: 1,
       sources: 2,
     });
     expect(overview.activity.map((item) => item.label)).toEqual([
       'Report "Automotive Semiconductor Hiring Comparison" ready',
-      "Collection run RUN-20260716-001 completed with 42 records",
+      "Collection run RUN-20260716-001 completed with 150 records",
     ]);
     expect(overview.activity.map((item) => item.tone)).toEqual(["info", "success"]);
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import DOMPurify from "dompurify";
@@ -15,6 +15,7 @@ import { ProjectShell } from "./shell";
 
 type SourceFilter = "job" | "news";
 type SelectionFilter = "all" | "selected";
+const JOBS_PAGE_SIZE = 25;
 
 export function DataWorkspacePage({
   projectId,
@@ -40,8 +41,13 @@ export function DataWorkspacePage({
   const [companyFilter, setCompanyFilter] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedSourceId, searchQuery, selectionFilter, companyFilter, locationFilter]);
 
   if (!dataView) {
     return (
@@ -63,13 +69,21 @@ export function DataWorkspacePage({
     matchesLocationFilter(record, locationFilter) &&
     (selectionFilter === "all" || selectedSet.has(record.ref)),
   );
+  const isJobsSection = selectedSourceId === "job";
+  const pageCount = isJobsSection
+    ? Math.max(1, Math.ceil(filtered.length / JOBS_PAGE_SIZE))
+    : 1;
+  const boundedPage = Math.min(currentPage, pageCount);
+  const pageStart = isJobsSection ? (boundedPage - 1) * JOBS_PAGE_SIZE : 0;
+  const pageEnd = isJobsSection ? pageStart + JOBS_PAGE_SIZE : filtered.length;
+  const visibleRecords = isJobsSection ? filtered.slice(pageStart, pageEnd) : filtered;
   const activeRecord =
-    filtered.find((record) => record.id === activeRecordId) ??
-    filtered[0] ??
+    visibleRecords.find((record) => record.id === activeRecordId) ??
+    visibleRecords[0] ??
     dataView.records[0];
   const sectionCounts = countBySection(dataView.records);
   const selectedCounts = countSelectedBySection(dataView.records, selectedSet);
-  const visibleRefs = filtered.map((record) => record.ref);
+  const visibleRefs = visibleRecords.map((record) => record.ref);
   const allVisibleSelected =
     visibleRefs.length > 0 && visibleRefs.every((ref) => selectedSet.has(ref));
 
@@ -160,7 +174,13 @@ export function DataWorkspacePage({
           <div className="iis-page-header">
             <div>
               <h1>{formatSectionLabel(selectedSourceId)}</h1>
-              <p>{filtered.length} of {sectionRecords.length} records</p>
+              <p>{formatRecordRangeLabel({
+                filteredCount: filtered.length,
+                totalCount: sectionRecords.length,
+                pageStart,
+                visibleCount: visibleRecords.length,
+                paginated: isJobsSection,
+              })}</p>
             </div>
           </div>
           <div className="iis-data-toolbar">
@@ -226,7 +246,7 @@ export function DataWorkspacePage({
           )}
           <StructuredRecordsTable
             section={selectedSourceId}
-            records={filtered}
+            records={visibleRecords}
             activeRecordId={activeRecord?.id}
             selectedRefs={selectedSet}
             onActivate={setActiveRecordId}
@@ -234,6 +254,13 @@ export function DataWorkspacePage({
             onToggleAll={toggleVisibleRecords}
             allVisibleSelected={allVisibleSelected}
           />
+          {isJobsSection && filtered.length > JOBS_PAGE_SIZE && (
+            <PaginationControls
+              page={boundedPage}
+              pageCount={pageCount}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </section>
 
         <DataDetailsPanel
@@ -397,6 +424,38 @@ function StructuredRecordsTable({
   );
 }
 
+function PaginationControls({
+  page,
+  pageCount,
+  onPageChange,
+}: {
+  page: number;
+  pageCount: number;
+  onPageChange: (page: number) => void;
+}) {
+  return (
+    <div className="iis-data-pagination">
+      <button
+        className="iis-button iis-button-ghost"
+        type="button"
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        Previous
+      </button>
+      <span>Page {page} of {pageCount}</span>
+      <button
+        className="iis-button iis-button-ghost"
+        type="button"
+        disabled={page >= pageCount}
+        onClick={() => onPageChange(page + 1)}
+      >
+        Next
+      </button>
+    </div>
+  );
+}
+
 function DataDetailsPanel({
   record,
   checked,
@@ -534,6 +593,27 @@ function SelectionSummaryBar({
 
 function formatSectionLabel(filter: SourceFilter): string {
   return filter === "job" ? "Jobs" : "News";
+}
+
+function formatRecordRangeLabel({
+  filteredCount,
+  totalCount,
+  pageStart,
+  visibleCount,
+  paginated,
+}: {
+  filteredCount: number;
+  totalCount: number;
+  pageStart: number;
+  visibleCount: number;
+  paginated: boolean;
+}): string {
+  if (!paginated || filteredCount === 0) {
+    return `${filteredCount} of ${totalCount} records`;
+  }
+  const first = pageStart + 1;
+  const last = pageStart + visibleCount;
+  return `${first}-${last} of ${filteredCount} records`;
 }
 
 function formatRecordSource(record: WorkspaceDataRecord): string {

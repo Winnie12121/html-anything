@@ -38,7 +38,13 @@ describe("demo workspace bootstrap", () => {
     );
     expect(project.slug).toBe(DEMO_PROJECT_SLUG);
     expect(project.name).toBe("Automotive Semiconductor HR Market Insight");
-    expect(project.trackedCompanies).toContain("英飞凌");
+    expect(project.trackedCompanies).toEqual([
+      "英飞凌",
+      "德州仪器",
+      "高通",
+      "意法半导体",
+      "恩智浦",
+    ]);
 
     const sources = await readJsonFile<WorkspaceSourceConfig>(
       root,
@@ -48,11 +54,21 @@ describe("demo workspace bootstrap", () => {
     expect(sources.sources[0]?.displayName).toBe("Liepin scraper");
     expect(sources.sources[0]?.description.toLowerCase()).not.toContain("mock");
 
-    const jobs = await readJsonlFile<{ id: string }>(
+    const jobs = await readJsonlFile<{ id: string; fields: { company?: string } }>(
       root,
       `projects/${DEMO_PROJECT_SLUG}/sources/external/normalized/jobs.jsonl`,
     );
-    expect(jobs).toHaveLength(42);
+    expect(jobs).toHaveLength(150);
+    expect(new Set(jobs.map((job) => job.fields.company))).toEqual(
+      new Set(["英飞凌", "德州仪器", "高通", "意法半导体", "恩智浦"]),
+    );
+    expect(countCompanies(jobs)).toEqual({
+      英飞凌: 42,
+      德州仪器: 36,
+      高通: 31,
+      意法半导体: 23,
+      恩智浦: 18,
+    });
   });
 
   it("creates one standalone report html file with section selectors", async () => {
@@ -86,3 +102,11 @@ describe("demo workspace bootstrap", () => {
     await expect(readTextFile(root, projectPath)).resolves.toBe(first);
   });
 });
+
+function countCompanies(jobs: Array<{ fields: { company?: string } }>): Record<string, number> {
+  return jobs.reduce<Record<string, number>>((counts, job) => {
+    const company = job.fields.company ?? "";
+    counts[company] = (counts[company] ?? 0) + 1;
+    return counts;
+  }, {});
+}

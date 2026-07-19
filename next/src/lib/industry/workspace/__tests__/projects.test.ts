@@ -35,8 +35,8 @@ describe("workspace projects", () => {
     expect(projects).toHaveLength(1);
     expect(projects[0]?.project.slug).toBe(DEMO_PROJECT_SLUG);
     expect(projects[0]?.counts).toEqual({
-      companies: 33,
-      dataItems: 42,
+      companies: 5,
+      dataItems: 150,
       reports: 1,
       sources: 2,
     });

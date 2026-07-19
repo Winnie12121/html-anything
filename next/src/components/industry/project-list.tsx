@@ -177,7 +177,7 @@ function CreateProjectDialog({
   const [industry, setIndustry] = useState("Automotive Semiconductor");
   const [region, setRegion] = useState<"China" | "Global">("China");
   const [trackedCompanies, setTrackedCompanies] = useState(
-    "英飞凌、意法半导体、德州仪器、恩智浦、瑞萨电子、安森美、高通、博通、ADI、微芯科技",
+    "英飞凌、德州仪器、高通、意法半导体、恩智浦",
   );
 
   const parsedCompanies = parseCompanyList(trackedCompanies);

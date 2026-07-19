@@ -26,12 +26,12 @@ describe("workspace data", () => {
 
     const view = await readWorkspaceData(DEMO_PROJECT_SLUG, root);
 
-    expect(view.records).toHaveLength(42);
+    expect(view.records).toHaveLength(150);
     expect(view.records[0]?.sourceId).toBe("liepin");
-    expect(view.records.some((record) => record.fields.salary === "急聘10-25k")).toBe(true);
+    expect(view.records.some((record) => record.fields.keyword === "英飞凌")).toBe(true);
     expect(view.sourceCounts).toEqual({
-      all: 42,
-      job: 42,
+      all: 150,
+      job: 150,
       news: 0,
       web_page: 0,
     });
@@ -84,9 +84,9 @@ describe("workspace data", () => {
 
     const view = await readWorkspaceData(DEMO_PROJECT_SLUG, root);
 
-    expect(view.selection.selectedRecordRefs).toHaveLength(42);
+    expect(view.selection.selectedRecordRefs).toHaveLength(150);
     expect(view.selectedCounts).toEqual({
-      job: 42,
+      job: 150,
       news: 0,
       web_page: 0,
     });
