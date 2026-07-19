@@ -11,12 +11,14 @@ import { readWorkspaceProject } from "../projects";
 import {
   addWorkspaceReportComment,
   buildWorkspaceReportGenerationPrompt,
+  buildWorkspaceReportRegenerationPrompt,
   createWorkspaceReport,
   deleteWorkspaceReport,
   readWorkspaceReportSetup,
   readWorkspaceReportStudio,
   readWorkspaceReports,
   resolveWorkspaceReportComment,
+  saveRegeneratedWorkspaceReportHtml,
   saveWorkspaceReportHtml,
 } from "../reports";
 import type { WorkspaceReportComment, WorkspaceReportMetadata } from "../schema";
@@ -237,5 +239,93 @@ describe("workspace reports", () => {
         resolved: true,
       },
     ]);
+  });
+
+  it("writes anchored and general report comments", async () => {
+    await ensureDemoWorkspace(root);
+    const { reportSlug } = await createWorkspaceReport(
+      DEMO_PROJECT_SLUG,
+      {
+        name: "Anchored Comments Report",
+        templateId: "executive-industry-brief",
+        audience: "Strategy team",
+        language: "English",
+        goal: "Prepare comments.",
+        includedInsightIds: ["metric-job-volume"],
+      },
+      root,
+    );
+
+    const anchored = await addWorkspaceReportComment(
+      DEMO_PROJECT_SLUG,
+      reportSlug,
+      {
+        text: "Make this claim more specific.",
+        refs: [{ id: "b12", tag: "p", snippet: "Hiring volume increased" }],
+      },
+      root,
+    );
+    const general = await addWorkspaceReportComment(
+      DEMO_PROJECT_SLUG,
+      reportSlug,
+      {
+        text: "Make the whole report more executive-ready.",
+        general: true,
+      },
+      root,
+    );
+
+    const comments = await readJsonFile<WorkspaceReportComment[]>(
+      root,
+      `projects/${DEMO_PROJECT_SLUG}/reports/${reportSlug}/comments.json`,
+    );
+    expect(comments).toMatchObject([
+      { id: anchored.id, refs: [{ id: "b12", tag: "p" }], resolved: false },
+      { id: general.id, general: true, resolved: false },
+    ]);
+  });
+
+  it("builds a regeneration prompt and snapshots previous HTML", async () => {
+    await ensureDemoWorkspace(root);
+    const { reportSlug } = await createWorkspaceReport(
+      DEMO_PROJECT_SLUG,
+      {
+        name: "Regenerate Comments Report",
+        templateId: "executive-industry-brief",
+        audience: "Strategy team",
+        language: "English",
+        goal: "Prepare comments.",
+        includedInsightIds: ["metric-job-volume"],
+        generatedHtml: "<!doctype html><html><body><h1>Before</h1><p>Hiring volume increased</p></body></html>",
+      },
+      root,
+    );
+    await addWorkspaceReportComment(
+      DEMO_PROJECT_SLUG,
+      reportSlug,
+      {
+        text: "Quantify this and make it sharper.",
+        refs: [{ id: "b2", tag: "p", snippet: "Hiring volume increased" }],
+      },
+      root,
+    );
+
+    const prompt = await buildWorkspaceReportRegenerationPrompt(DEMO_PROJECT_SLUG, reportSlug, {}, root);
+    expect(prompt).toContain("Apply only the comments below");
+    expect(prompt).toContain("<p> \"Hiring volume increased\"");
+    expect(prompt).toContain("Quantify this and make it sharper.");
+    expect(prompt).toContain("<h1>Before</h1>");
+
+    const result = await saveRegeneratedWorkspaceReportHtml(
+      DEMO_PROJECT_SLUG,
+      reportSlug,
+      { html: "<!doctype html><html><body><h1>After</h1></body></html>" },
+      root,
+    );
+    const nextStudio = await readWorkspaceReportStudio(DEMO_PROJECT_SLUG, reportSlug, root);
+    const snapshot = await readFile(path.join(root, result.snapshotPath), "utf8");
+
+    expect(nextStudio.html).toContain("<h1>After</h1>");
+    expect(snapshot).toContain("<h1>Before</h1>");
   });
 });

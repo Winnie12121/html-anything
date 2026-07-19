@@ -83,9 +83,21 @@ export type WorkspaceReportMetadata = {
 
 export type WorkspaceReportComment = {
   id: string;
-  sectionId: string;
+  sectionId?: string;
   text: string;
   resolved: boolean;
   createdAt: string;
   updatedAt?: string;
+  general?: boolean;
+  refs?: Array<{
+    id: string;
+    tag: string;
+    snippet: string;
+  }>;
+  author?: {
+    id: string;
+    name: string;
+    color: string;
+  };
+  editedAt?: string;
 };

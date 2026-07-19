@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "id": "comment-mrs3u1b6",
+    "refs": [
+      {
+        "id": "b8",
+        "tag": "h1",
+        "snippet": "Automotive Semiconductor Hiring"
+      },
+      {
+        "id": "b43",
+        "tag": "div",
+        "snippet": "Key finding: Equipment engineering roles dominate hiring (11 of 42 postings, 26%), driven"
+      }
+    ],
+    "text": "加一个comparison",
+    "resolved": true,
+    "createdAt": "2026-07-19T18:03:46.337Z",
+    "updatedAt": "2026-07-19T18:03:50.509Z"
+  }
+]

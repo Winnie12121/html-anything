@@ -47,8 +47,23 @@ export type SaveWorkspaceReportHtmlInput = {
 };
 
 export type AddWorkspaceReportCommentInput = {
-  sectionId: string;
+  sectionId?: string;
   text: string;
+  general?: boolean;
+  refs?: Array<{
+    id: string;
+    tag: string;
+    snippet: string;
+  }>;
+};
+
+export type BuildWorkspaceReportRegenerationPromptInput = {
+  instruction?: string;
+  commentIds?: string[];
+};
+
+export type SaveRegeneratedWorkspaceReportHtmlInput = {
+  html: string;
 };
 
 export async function buildWorkspaceReportGenerationPrompt(
@@ -209,6 +224,110 @@ export async function saveWorkspaceReportHtml(
   return nextReport;
 }
 
+export async function buildWorkspaceReportRegenerationPrompt(
+  projectSlug: string,
+  reportSlug: string,
+  input: BuildWorkspaceReportRegenerationPromptInput = {},
+  root?: string,
+): Promise<string> {
+  const workspaceRoot = root ?? (await configuredWorkspaceRoot());
+  const [projectSummary, report, comments] = await Promise.all([
+    readWorkspaceProject(projectSlug, workspaceRoot),
+    readJsonFile<WorkspaceReportMetadata>(
+      workspaceRoot,
+      reportPath(projectSlug, reportSlug, "report.json"),
+    ),
+    readReportComments(workspaceRoot, projectSlug, reportSlug),
+  ]);
+  const html = await readTextFile(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, report.currentHtmlPath),
+  );
+  const requestedIds = input.commentIds?.length ? new Set(input.commentIds) : null;
+  const selectedComments = comments.filter((comment) =>
+    !comment.resolved && (!requestedIds || requestedIds.has(comment.id)),
+  );
+
+  if (selectedComments.length === 0) {
+    throw new Error("At least one unresolved comment is required");
+  }
+
+  return `You are revising an existing standalone HTML report for Industry Insight Studio.
+
+Hard requirements:
+- Return one complete standalone HTML document only.
+- Do not use markdown fences and do not add explanatory text.
+- First non-whitespace characters must be <!doctype html> or <!DOCTYPE html>.
+- Preserve the current visual direction, CSS, layout, and data evidence unless a comment explicitly asks for a change.
+- Apply only the comments below. Do not invent facts beyond the current HTML.
+- Keep report content professional for ${report.audience || "business readers"}.
+
+Project:
+${JSON.stringify({
+  name: projectSummary.project.name,
+  industry: projectSummary.project.industry,
+  region: projectSummary.project.region,
+}, null, 2)}
+
+Report:
+${JSON.stringify({
+  name: report.name,
+  language: report.language,
+  goal: report.goal,
+}, null, 2)}
+
+${input.instruction?.trim() ? `Additional instruction:\n${input.instruction.trim()}\n\n` : ""}## CURRENT HTML
+
+\`\`\`html
+${html}
+\`\`\`
+
+## COMMENTS TO APPLY
+
+${formatRegenerationComments(selectedComments)}
+
+Return only the final revised HTML document.`;
+}
+
+export async function saveRegeneratedWorkspaceReportHtml(
+  projectSlug: string,
+  reportSlug: string,
+  input: SaveRegeneratedWorkspaceReportHtmlInput,
+  root?: string,
+): Promise<{ report: WorkspaceReportMetadata; snapshotPath: string }> {
+  const workspaceRoot = root ?? (await configuredWorkspaceRoot());
+  const report = await readJsonFile<WorkspaceReportMetadata>(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, "report.json"),
+  );
+  const previousHtml = await readTextFile(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, report.currentHtmlPath),
+  );
+  const now = new Date().toISOString();
+  const snapshotName = `${now.replace(/[:.]/g, "-")}.html`;
+  const snapshotPath = reportPath(projectSlug, reportSlug, "snapshots", snapshotName);
+  const nextReport: WorkspaceReportMetadata = {
+    ...report,
+    updatedAt: now,
+  };
+
+  await writeTextFile(workspaceRoot, snapshotPath, previousHtml);
+  await writeTextFile(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, report.currentHtmlPath),
+    input.html,
+  );
+  await writeJsonFile(
+    workspaceRoot,
+    reportPath(projectSlug, reportSlug, "report.json"),
+    nextReport,
+  );
+  await touchProject(workspaceRoot, projectSlug, now);
+
+  return { report: nextReport, snapshotPath };
+}
+
 export async function addWorkspaceReportComment(
   projectSlug: string,
   reportSlug: string,
@@ -220,7 +339,9 @@ export async function addWorkspaceReportComment(
   const now = new Date().toISOString();
   const comment: WorkspaceReportComment = {
     id: `comment-${Date.now().toString(36)}`,
-    sectionId: input.sectionId,
+    ...(input.sectionId ? { sectionId: input.sectionId } : {}),
+    ...(input.general ? { general: true } : {}),
+    ...(input.refs?.length ? { refs: input.refs } : {}),
     text: input.text.trim(),
     resolved: false,
     createdAt: now,
@@ -234,6 +355,32 @@ export async function addWorkspaceReportComment(
   await touchReportAndProject(workspaceRoot, projectSlug, reportSlug, now);
 
   return comment;
+}
+
+function formatRegenerationComments(comments: WorkspaceReportComment[]): string {
+  const general = comments.filter((comment) => comment.general || !comment.refs?.length);
+  const anchored = comments.filter((comment) => comment.refs?.length);
+  const lines: string[] = [];
+
+  if (general.length > 0) {
+    lines.push("### Whole-document notes", "");
+    for (const comment of general) {
+      lines.push(`- ${comment.text}`);
+    }
+    lines.push("");
+  }
+
+  if (anchored.length > 0) {
+    lines.push(`### Anchored comments (${anchored.length})`, "");
+    anchored.forEach((comment, index) => {
+      const targets = (comment.refs ?? [])
+        .map((ref) => `<${ref.tag}> "${ref.snippet}"`)
+        .join(" + ");
+      lines.push(`${index + 1}. ${targets}`, `   ${comment.text}`, "");
+    });
+  }
+
+  return lines.join("\n").trim();
 }
 
 export async function resolveWorkspaceReportComment(
