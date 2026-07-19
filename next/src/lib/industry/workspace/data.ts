@@ -1,6 +1,7 @@
 import {
   readJsonFile,
   readJsonlFile,
+  readTextFile,
   writeJsonFile,
 } from "./fs";
 import { projectPath } from "./paths";
@@ -32,8 +33,15 @@ export async function readWorkspaceData(
     readDataRecords(workspaceRoot, projectSlug),
     readCurrentSelection(workspaceRoot, projectSlug),
   ]);
+  const effectiveSelection =
+    selection.selectedRecordRefs.length > 0
+      ? selection
+      : {
+          ...selection,
+          selectedRecordRefs: records.map((record) => record.ref),
+        };
 
-  const selectedSet = new Set(selection.selectedRecordRefs);
+  const selectedSet = new Set(effectiveSelection.selectedRecordRefs);
   const selectedCounts = makeKindCounts(
     records.filter((record) => selectedSet.has(record.ref)),
   );
@@ -46,7 +54,7 @@ export async function readWorkspaceData(
     project: projectSummary.project,
     counts: projectSummary.counts,
     records,
-    selection,
+    selection: effectiveSelection,
     sourceCounts,
     selectedCounts,
   };
@@ -91,8 +99,11 @@ async function readDataRecords(
         root,
         projectPath(projectSlug, file.path),
       );
+      const enrichedRows = await Promise.all(
+        rows.map((row) => enrichMarkdownRecord(root, projectSlug, row)),
+      );
       records.push(
-        ...rows.map((row) => ({
+        ...enrichedRows.map((row) => ({
           ...row,
           kind: row.kind ?? file.kind,
           sourcePath: file.path,
@@ -105,6 +116,24 @@ async function readDataRecords(
   }
 
   return records.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}
+
+async function enrichMarkdownRecord(
+  root: string,
+  projectSlug: string,
+  row: RawWorkspaceRecord,
+): Promise<RawWorkspaceRecord> {
+  const reportPath = row.fields.reportPath;
+  if (row.kind !== "web_page" || typeof reportPath !== "string" || !reportPath.trim()) {
+    return row;
+  }
+
+  try {
+    const markdown = await readTextFile(root, projectPath(projectSlug, reportPath));
+    return { ...row, rawText: markdown };
+  } catch {
+    return row;
+  }
 }
 
 async function readCurrentSelection(

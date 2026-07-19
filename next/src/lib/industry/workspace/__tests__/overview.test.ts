@@ -27,14 +27,14 @@ describe("workspace overview", () => {
 
     expect(overview.project.slug).toBe(DEMO_PROJECT_SLUG);
     expect(overview.counts).toEqual({
-      companies: 2,
-      dataItems: 3,
+      companies: 33,
+      dataItems: 42,
       reports: 1,
-      sources: 4,
+      sources: 2,
     });
     expect(overview.activity.map((item) => item.label)).toEqual([
-      'Report "China Automotive Hiring Comparison" ready',
-      "Collection run RUN-20260716-001 completed with 3 records",
+      'Report "Automotive Semiconductor Hiring Comparison" ready',
+      "Collection run RUN-20260716-001 completed with 42 records",
     ]);
     expect(overview.activity.map((item) => item.tone)).toEqual(["info", "success"]);
   });
@@ -44,7 +44,8 @@ describe("workspace overview", () => {
       {
         name: "New Market Scan",
         industry: "Industrial",
-        region: "North America",
+        region: "Global",
+        trackedCompanies: ["Acme"],
       },
       root,
     );

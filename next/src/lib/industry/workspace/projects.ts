@@ -5,6 +5,7 @@ import {
   pathExists,
   readJsonFile,
   readJsonlFile,
+  removeWorkspacePath,
   writeJsonFile,
   writeTextFile,
 } from "./fs";
@@ -13,6 +14,7 @@ import { projectPath, toWorkspaceSlug } from "./paths";
 import {
   WORKSPACE_SCHEMA_VERSION,
   type WorkspaceProject,
+  type WorkspaceRegion,
   type WorkspaceSourceConfig,
 } from "./schema";
 import type {
@@ -23,7 +25,8 @@ import type {
 export type CreateWorkspaceProjectInput = {
   name: string;
   industry: string;
-  region: string;
+  region: WorkspaceRegion;
+  trackedCompanies: string[];
   tags?: string[];
 };
 
@@ -31,6 +34,22 @@ type ProjectDataRecord = {
   kind?: string;
   fields?: Record<string, unknown>;
 };
+
+export const DEFAULT_HIRING_KEYWORDS = [
+  "半导体",
+  "汽车半导体",
+  "车规芯片",
+  "SiC",
+  "GaN",
+  "MCU",
+  "功率器件",
+  "模拟芯片",
+  "传感器",
+  "ADAS",
+  "座舱SoC",
+  "功能安全",
+  "800V",
+];
 
 export async function configuredWorkspaceRoot(): Promise<string> {
   const config = await readAppWorkspaceConfig();
@@ -70,7 +89,11 @@ export async function createWorkspaceProject(
   const slug = await nextAvailableProjectSlug(workspaceRoot, baseSlug);
   const now = new Date().toISOString();
   const industry = input.industry.trim() || "Industry";
-  const region = input.region.trim() || "Region";
+  const region = normalizeWorkspaceRegion(input.region);
+  const trackedCompanies = normalizeStringList(input.trackedCompanies);
+  if (!trackedCompanies.length) {
+    throw new Error("At least one tracked company is required");
+  }
   const tags = input.tags?.length
     ? input.tags
     : [industry, region].filter(Boolean);
@@ -82,6 +105,7 @@ export async function createWorkspaceProject(
     industry,
     region,
     tags,
+    trackedCompanies,
     createdAt: now,
     updatedAt: now,
   };
@@ -90,7 +114,11 @@ export async function createWorkspaceProject(
   await writeJsonFile(workspaceRoot, projectPath(slug, "project.json"), project);
   await writeJsonFile(workspaceRoot, projectPath(slug, "source-config.json"), {
     version: WORKSPACE_SCHEMA_VERSION,
-    sources: defaultSourceConfigs(),
+    sources: defaultSourceConfigs({
+      industry,
+      region,
+      trackedCompanies,
+    }),
   } satisfies WorkspaceSourceConfig);
   await writeJsonFile(workspaceRoot, projectPath(slug, "sources/uploaded/files.json"), {
     version: WORKSPACE_SCHEMA_VERSION,
@@ -128,6 +156,19 @@ export async function readWorkspaceProject(
   };
 }
 
+export async function deleteWorkspaceProject(
+  projectSlug: string,
+  root?: string,
+): Promise<void> {
+  const workspaceRoot = root ?? (await configuredWorkspaceRoot());
+  const projectJsonPath = projectPath(projectSlug, "project.json");
+  if (!(await pathExists(path.join(workspaceRoot, projectJsonPath)))) {
+    throw notFoundError(`Project not found: ${projectSlug}`);
+  }
+
+  await removeWorkspacePath(workspaceRoot, projectPath(projectSlug));
+}
+
 async function ensureWorkspaceScaffold(root: string): Promise<void> {
   await ensureDir(root);
   await ensureDir(path.join(root, "projects"));
@@ -145,10 +186,8 @@ async function ensureWorkspaceScaffold(root: string): Promise<void> {
 
 async function ensureProjectDirectories(root: string, slug: string): Promise<void> {
   const dirs = [
-    projectPath(slug, "sources/external/raw/career-sites"),
     projectPath(slug, "sources/external/raw/liepin"),
     projectPath(slug, "sources/external/raw/tavily"),
-    projectPath(slug, "sources/external/raw/manual-urls"),
     projectPath(slug, "sources/external/normalized"),
     projectPath(slug, "sources/uploaded/original"),
     projectPath(slug, "sources/uploaded/parsed"),
@@ -213,12 +252,21 @@ async function countSources(root: string, projectSlug: string): Promise<number> 
 }
 
 async function countReports(root: string, projectSlug: string): Promise<number> {
+  let reportSlugs: string[];
   try {
-    return (await listDirectories(root, projectPath(projectSlug, "reports"))).length;
+    reportSlugs = await listDirectories(root, projectPath(projectSlug, "reports"));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0;
     throw error;
   }
+
+  let count = 0;
+  for (const reportSlug of reportSlugs) {
+    if (await pathExists(path.join(root, projectPath(projectSlug, "reports", reportSlug, "report.json")))) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 async function readProjectDataRecords(
@@ -248,23 +296,22 @@ async function readProjectDataRecords(
   return records;
 }
 
-function defaultSourceConfigs(): WorkspaceSourceConfig["sources"] {
+function defaultSourceConfigs(input: {
+  industry: string;
+  region: WorkspaceRegion;
+  trackedCompanies: string[];
+}): WorkspaceSourceConfig["sources"] {
   return [
-    {
-      id: "career-sites",
-      type: "career_site",
-      displayName: "Company Career Sites",
-      description: "Collect job openings from company recruitment websites.",
-      enabled: true,
-      config: { companies: [] },
-    },
     {
       id: "liepin",
       type: "liepin",
-      displayName: "Liepin",
-      description: "Collect public job listings from Liepin using a saved browser session.",
-      enabled: false,
-      config: { keywords: [] },
+      displayName: "Liepin scraper",
+      description: "Collect and normalize Liepin job listings for tracked companies.",
+      enabled: true,
+      config: {
+        companies: input.trackedCompanies,
+        keywords: DEFAULT_HIRING_KEYWORDS,
+      },
     },
     {
       id: "tavily",
@@ -272,15 +319,41 @@ function defaultSourceConfigs(): WorkspaceSourceConfig["sources"] {
       displayName: "Tavily Search",
       description: "Search industry news, company activity, hiring trends, and market signals.",
       enabled: true,
-      config: { topics: [] },
-    },
-    {
-      id: "manual-urls",
-      type: "url_import",
-      displayName: "Manual URL Imports",
-      description: "Import market articles, company pages, and other web references by URL.",
-      enabled: true,
-      config: { urls: [] },
+      config: {
+        topics: buildTavilyTopics(input),
+      },
     },
   ];
+}
+
+export function buildTavilyTopics(input: {
+  industry: string;
+  region: WorkspaceRegion;
+  trackedCompanies: string[];
+}): string[] {
+  const companies = input.trackedCompanies.slice(0, 5);
+  const regionText = input.region === "China" ? "中国" : "global";
+  return [
+    ...companies.flatMap((company) => [
+      `${company} ${regionText} ${input.industry} 招聘`,
+      `${company} ${regionText} ${input.industry} 投资 研发中心`,
+    ]),
+    `${input.industry} 人才需求 ${regionText}`,
+    `${input.industry} 薪资 招聘趋势 ${regionText}`,
+  ];
+}
+
+export function normalizeWorkspaceRegion(value: string): WorkspaceRegion {
+  if (value === "Global") return "Global";
+  return "China";
+}
+
+function normalizeStringList(values: string[]): string[] {
+  return Array.from(
+    new Set(values.map((value) => value.trim()).filter(Boolean)),
+  );
+}
+
+function notFoundError(message: string): Error {
+  return Object.assign(new Error(message), { code: "ENOENT" });
 }

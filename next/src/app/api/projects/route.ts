@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   createWorkspaceProject,
   listWorkspaceProjects,
+  normalizeWorkspaceRegion,
 } from "@/lib/industry/workspace";
 
 export const runtime = "nodejs";
@@ -20,7 +21,13 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { name?: unknown; industry?: unknown; region?: unknown; tags?: unknown };
+  let body: {
+    name?: unknown;
+    industry?: unknown;
+    region?: unknown;
+    tags?: unknown;
+    trackedCompanies?: unknown;
+  };
   try {
     body = (await req.json()) as typeof body;
   } catch {
@@ -40,12 +47,29 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
+  if (body.region !== "China" && body.region !== "Global") {
+    return NextResponse.json(
+      { error: "Region must be China or Global" },
+      { status: 400 },
+    );
+  }
+
+  const trackedCompanies = Array.isArray(body.trackedCompanies)
+    ? body.trackedCompanies.filter((company): company is string => typeof company === "string")
+    : [];
+  if (!trackedCompanies.some((company) => company.trim())) {
+    return NextResponse.json(
+      { error: "At least one tracked company is required" },
+      { status: 400 },
+    );
+  }
 
   try {
     const project = await createWorkspaceProject({
       name: body.name,
       industry: body.industry,
-      region: body.region,
+      region: normalizeWorkspaceRegion(body.region),
+      trackedCompanies,
       tags: Array.isArray(body.tags)
         ? body.tags.filter((tag): tag is string => typeof tag === "string")
         : undefined,

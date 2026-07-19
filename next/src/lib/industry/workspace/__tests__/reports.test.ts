@@ -7,10 +7,12 @@ import {
   ensureDemoWorkspace,
 } from "../bootstrap";
 import { readJsonFile } from "../fs";
+import { readWorkspaceProject } from "../projects";
 import {
   addWorkspaceReportComment,
   buildWorkspaceReportGenerationPrompt,
   createWorkspaceReport,
+  deleteWorkspaceReport,
   readWorkspaceReportSetup,
   readWorkspaceReportStudio,
   readWorkspaceReports,
@@ -35,12 +37,12 @@ describe("workspace reports", () => {
 
     const setup = await readWorkspaceReportSetup(DEMO_PROJECT_SLUG, root);
 
-    expect(setup.selectedRecords).toHaveLength(3);
+    expect(setup.selectedRecords).toHaveLength(2);
     expect(setup.suggestedInsights.map((insight) => insight.id)).toEqual(
       expect.arrayContaining([
         "metric-job-volume",
         "chart-company-comparison",
-        "narrative-market-signals",
+        "chart-location-distribution",
       ]),
     );
   });
@@ -86,6 +88,18 @@ describe("workspace reports", () => {
 
     const reports = await readWorkspaceReports(DEMO_PROJECT_SLUG, root);
     expect(reports.reports.some((report) => report.slug === result.reportSlug)).toBe(true);
+  });
+
+  it("uses the same valid report count as the project summary", async () => {
+    await ensureDemoWorkspace(root);
+
+    const [project, reports] = await Promise.all([
+      readWorkspaceProject(DEMO_PROJECT_SLUG, root),
+      readWorkspaceReports(DEMO_PROJECT_SLUG, root),
+    ]);
+
+    expect(reports.counts.reports).toBe(project.counts.reports);
+    expect(reports.counts.reports).toBe(reports.reports.length);
   });
 
   it("builds a CLI report prompt that requires one standalone HTML file", async () => {
@@ -159,6 +173,30 @@ describe("workspace reports", () => {
 
     const nextStudio = await readWorkspaceReportStudio(DEMO_PROJECT_SLUG, reportSlug, root);
     expect(nextStudio.html).toContain("<h1>Edited</h1>");
+  });
+
+  it("deletes a report directory and updates the reports list", async () => {
+    await ensureDemoWorkspace(root);
+    const { reportSlug } = await createWorkspaceReport(
+      DEMO_PROJECT_SLUG,
+      {
+        name: "Delete Me",
+        templateId: "executive-industry-brief",
+        audience: "Strategy team",
+        language: "English",
+        goal: "Prepare a disposable report.",
+        includedInsightIds: ["metric-job-volume"],
+      },
+      root,
+    );
+
+    await deleteWorkspaceReport(DEMO_PROJECT_SLUG, reportSlug, root);
+
+    const reports = await readWorkspaceReports(DEMO_PROJECT_SLUG, root);
+    expect(reports.reports.some((report) => report.slug === reportSlug)).toBe(false);
+    await expect(
+      readWorkspaceReportStudio(DEMO_PROJECT_SLUG, reportSlug, root),
+    ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("writes and resolves report comments in comments.json", async () => {

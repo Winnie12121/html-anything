@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Building2, Clock, Database, FileText, Plus } from "lucide-react";
+import { Building2, Clock, Database, FileText, Plus, Trash2 } from "lucide-react";
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { AppTopBar, AppLogo } from "./shell";
 import { relativeTime } from "@/lib/industry/format";
 import type { WorkspaceProjectSummary } from "@/lib/industry/workspace/client";
@@ -17,6 +18,31 @@ export function ProjectListPage({
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [pendingDeleteProject, setPendingDeleteProject] = useState<
+    WorkspaceProjectSummary["project"] | null
+  >(null);
+
+  async function deleteProject(project: WorkspaceProjectSummary["project"]) {
+    setDeletingProjectId(project.slug);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/projects/${encodeURIComponent(project.slug)}`, {
+        method: "DELETE",
+      });
+      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        throw new Error(payload.error ?? "Project deletion failed");
+      }
+      setPendingDeleteProject(null);
+      router.refresh();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDeletingProjectId(null);
+    }
+  }
 
   return (
     <main className="iis-app">
@@ -41,31 +67,44 @@ export function ProjectListPage({
           {projects.map(({ project, counts }) => {
             const updatedAt = Date.parse(project.updatedAt);
             return (
-              <Link key={project.slug} href={`/projects/${project.slug}/overview`} className="iis-project-card">
-                <div className="iis-project-dot" />
-                <div className="iis-project-card-main">
-                  <h2>{project.name}</h2>
-                  <div className="iis-chip-row">
-                    {project.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
+              <article key={project.slug} className="iis-project-card">
+                <Link href={`/projects/${project.slug}/overview`} className="iis-project-card-link">
+                  <div className="iis-project-dot" />
+                  <div className="iis-project-card-main">
+                    <h2>{project.name}</h2>
+                    <div className="iis-chip-row">
+                      {project.tags.map((tag) => (
+                        <span key={tag}>{tag}</span>
+                      ))}
+                    </div>
+                    <div className="iis-project-stats">
+                      <span><Building2 size={18} /> {counts.companies} companies</span>
+                      <span><Database size={18} /> {counts.dataItems} data items</span>
+                      <span><FileText size={18} /> {counts.reports} reports</span>
+                    </div>
                   </div>
-                  <div className="iis-project-stats">
-                    <span><Building2 size={18} /> {counts.companies} companies</span>
-                    <span><Database size={18} /> {counts.dataItems} data items</span>
-                    <span><FileText size={18} /> {counts.reports} reports</span>
+                  <div className="iis-project-card-side">
+                    <strong>Open Project ›</strong>
+                    <span>
+                      <Clock size={18} /> Updated {Number.isFinite(updatedAt) ? relativeTime(updatedAt) : "-"}
+                    </span>
                   </div>
-                </div>
-                <div className="iis-project-card-side">
-                  <strong>Open Project ›</strong>
-                  <span>
-                    <Clock size={18} /> Updated {Number.isFinite(updatedAt) ? relativeTime(updatedAt) : "-"}
-                  </span>
-                </div>
-              </Link>
+                </Link>
+                <button
+                  className="iis-icon-button iis-button-danger iis-project-delete"
+                  type="button"
+                  title="Delete project"
+                  aria-label={`Delete project ${project.name}`}
+                  disabled={deletingProjectId === project.slug}
+                  onClick={() => setPendingDeleteProject(project)}
+                >
+                  <Trash2 size={18} />
+                </button>
+              </article>
             );
           })}
         </div>
+        {deleteError && <p className="iis-form-error">{deleteError}</p>}
 
         <button className="iis-empty-action" onClick={() => setOpen(true)} type="button">
           <span>+</span>
@@ -105,6 +144,15 @@ export function ProjectListPage({
           }}
         />
       )}
+      {pendingDeleteProject && (
+        <ConfirmDeleteDialog
+          title="Delete project"
+          message={`Delete project "${pendingDeleteProject.name}"? This cannot be undone.`}
+          busy={deletingProjectId === pendingDeleteProject.slug}
+          onCancel={() => setPendingDeleteProject(null)}
+          onConfirm={() => void deleteProject(pendingDeleteProject)}
+        />
+      )}
     </main>
   );
 }
@@ -118,11 +166,21 @@ function CreateProjectDialog({
   busy: boolean;
   error: string | null;
   onClose: () => void;
-  onCreate: (input: { name: string; industry: string; region: string }) => void | Promise<void>;
+  onCreate: (input: {
+    name: string;
+    industry: string;
+    region: "China" | "Global";
+    trackedCompanies: string[];
+  }) => void | Promise<void>;
 }) {
-  const [name, setName] = useState("China Automotive Talent Insight");
-  const [industry, setIndustry] = useState("Automotive");
-  const [region, setRegion] = useState("China");
+  const [name, setName] = useState("Automotive Semiconductor HR Market Insight");
+  const [industry, setIndustry] = useState("Automotive Semiconductor");
+  const [region, setRegion] = useState<"China" | "Global">("China");
+  const [trackedCompanies, setTrackedCompanies] = useState(
+    "英飞凌、意法半导体、德州仪器、恩智浦、瑞萨电子、安森美、高通、博通、ADI、微芯科技",
+  );
+
+  const parsedCompanies = parseCompanyList(trackedCompanies);
 
   return (
     <div className="iis-modal-backdrop" role="dialog" aria-modal="true">
@@ -130,7 +188,7 @@ function CreateProjectDialog({
         className="iis-modal"
         onSubmit={(event) => {
           event.preventDefault();
-          onCreate({ name, industry, region });
+          onCreate({ name, industry, region, trackedCompanies: parsedCompanies });
         }}
       >
         <h2>Create Project</h2>
@@ -144,7 +202,31 @@ function CreateProjectDialog({
         </label>
         <label>
           Region
-          <input value={region} onChange={(event) => setRegion(event.target.value)} />
+          <div className="iis-region-picker">
+            <button
+              className={region === "China" ? "active" : ""}
+              type="button"
+              onClick={() => setRegion("China")}
+            >
+              China
+            </button>
+            <button
+              className={region === "Global" ? "active" : ""}
+              type="button"
+              onClick={() => setRegion("Global")}
+            >
+              Global
+            </button>
+          </div>
+        </label>
+        <label>
+          Tracked Companies
+          <textarea
+            value={trackedCompanies}
+            onChange={(event) => setTrackedCompanies(event.target.value)}
+            rows={4}
+          />
+          <small>{parsedCompanies.length} companies configured</small>
         </label>
         {error && <p className="iis-form-error">{error}</p>}
         <div className="iis-modal-actions">
@@ -157,5 +239,16 @@ function CreateProjectDialog({
         </div>
       </form>
     </div>
+  );
+}
+
+function parseCompanyList(value: string): string[] {
+  return Array.from(
+    new Set(
+      value
+        .split(/[\n,，、]+/)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
   );
 }

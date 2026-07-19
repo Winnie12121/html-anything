@@ -37,24 +37,22 @@ describe("demo workspace bootstrap", () => {
       `projects/${DEMO_PROJECT_SLUG}/project.json`,
     );
     expect(project.slug).toBe(DEMO_PROJECT_SLUG);
-    expect(project.name).toBe("China Automotive Talent Insight");
+    expect(project.name).toBe("Automotive Semiconductor HR Market Insight");
+    expect(project.trackedCompanies).toContain("英飞凌");
 
     const sources = await readJsonFile<WorkspaceSourceConfig>(
       root,
       `projects/${DEMO_PROJECT_SLUG}/source-config.json`,
     );
-    expect(sources.sources.map((source) => source.id)).toEqual([
-      "career-sites",
-      "liepin",
-      "tavily",
-      "manual-urls",
-    ]);
+    expect(sources.sources.map((source) => source.id)).toEqual(["liepin", "tavily"]);
+    expect(sources.sources[0]?.displayName).toBe("Liepin scraper");
+    expect(sources.sources[0]?.description.toLowerCase()).not.toContain("mock");
 
     const jobs = await readJsonlFile<{ id: string }>(
       root,
       `projects/${DEMO_PROJECT_SLUG}/sources/external/normalized/jobs.jsonl`,
     );
-    expect(jobs).toHaveLength(2);
+    expect(jobs).toHaveLength(42);
   });
 
   it("creates one standalone report html file with section selectors", async () => {

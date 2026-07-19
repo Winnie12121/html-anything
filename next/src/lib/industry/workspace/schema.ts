@@ -13,13 +13,16 @@ export type AppWorkspaceConfig = {
   updatedAt: string;
 };
 
+export type WorkspaceRegion = "China" | "Global";
+
 export type WorkspaceProject = {
   id: string;
   slug: string;
   name: string;
   industry: string;
-  region: string;
+  region: WorkspaceRegion;
   tags: string[];
+  trackedCompanies: string[];
   createdAt: string;
   updatedAt: string;
 };

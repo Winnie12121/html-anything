@@ -6,6 +6,7 @@ import {
   readJsonFile,
   readJsonlFile,
   readTextFile,
+  removeWorkspacePath,
   writeJsonFile,
   writeTextFile,
 } from "./fs";
@@ -336,6 +337,21 @@ export async function createWorkspaceReport(
   );
 
   return { report, reportSlug };
+}
+
+export async function deleteWorkspaceReport(
+  projectSlug: string,
+  reportSlug: string,
+  root?: string,
+): Promise<void> {
+  const workspaceRoot = root ?? (await configuredWorkspaceRoot());
+  const reportJsonPath = reportPath(projectSlug, reportSlug, "report.json");
+  if (!(await pathExists(path.join(workspaceRoot, reportJsonPath)))) {
+    throw notFoundError(`Report not found: ${reportSlug}`);
+  }
+
+  await removeWorkspacePath(workspaceRoot, reportPath(projectSlug, reportSlug));
+  await touchProject(workspaceRoot, projectSlug, new Date().toISOString());
 }
 
 async function readReportComments(
@@ -722,4 +738,8 @@ function escapeHtml(value: unknown): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function notFoundError(message: string): Error {
+  return Object.assign(new Error(message), { code: "ENOENT" });
 }

@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { safeJoin } from "./paths";
 
@@ -49,6 +49,13 @@ export async function writeTextFile(
   const filePath = safeJoin(root, relativePath);
   await ensureDir(path.dirname(filePath));
   await writeFile(filePath, value, "utf8");
+}
+
+export async function removeWorkspacePath(
+  root: string,
+  relativePath: string,
+): Promise<void> {
+  await rm(safeJoin(root, relativePath), { recursive: true, force: true });
 }
 
 export async function readJsonlFile<T>(

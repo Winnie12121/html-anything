@@ -1,0 +1,13 @@
+{
+  "id": "RUN-20260719-002",
+  "sourceIds": [
+    "liepin",
+    "tavily"
+  ],
+  "status": "completed",
+  "progress": 100,
+  "startedAt": "2026-07-19T15:49:31.705Z",
+  "recordsCreated": 54,
+  "warnings": [],
+  "endedAt": "2026-07-19T15:52:03.020Z"
+}

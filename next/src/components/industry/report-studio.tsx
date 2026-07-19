@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Code2,
@@ -37,6 +37,19 @@ export function ReportStudioPage({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState(studioView.report.updatedAt);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    setSidebarCollapsed(localStorage.getItem("iis-sidebar-collapsed") === "true");
+  }, []);
+
+  function toggleSidebar() {
+    setSidebarCollapsed((value) => {
+      const next = !value;
+      localStorage.setItem("iis-sidebar-collapsed", String(next));
+      return next;
+    });
+  }
 
   const activeSection = useMemo(
     () =>
@@ -81,10 +94,19 @@ export function ReportStudioPage({
         projectName={studioView.project.name}
         section="Report Studio"
       />
-      <div className="iis-studio-frame">
+      <div
+        className={sidebarCollapsed ? "iis-studio-frame collapsed" : "iis-studio-frame"}
+        style={
+          sidebarCollapsed
+            ? { gridTemplateColumns: "72px 300px minmax(420px, 1fr) 360px" }
+            : undefined
+        }
+      >
         <ProjectSidebar
           projectId={projectId}
           counts={studioView.counts}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebar}
         />
         <aside className="iis-studio-left">
           <div className="iis-tabs-flat">

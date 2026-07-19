@@ -12,10 +12,10 @@ import {
   FolderOpen,
   Globe2,
   Grid2X2,
-  Home,
   Settings,
   ArrowLeft,
-  RefreshCcw,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useStore, type AgentInfo } from "@/lib/store";
 import { getProjectCounts, useIndustryStore } from "@/lib/industry/store";
@@ -45,11 +45,6 @@ export function AppTopBar({
   const project = useIndustryStore((s) =>
     projectId ? s.projects.find((p) => p.id === projectId) : undefined,
   );
-  const running = useIndustryStore((s) =>
-    projectId
-      ? s.runs.find((run) => run.projectId === projectId && run.status === "running")
-      : s.runs.find((run) => run.status === "running"),
-  );
   const agents = useStore((s) => s.agents);
   const selectedAgentId = useStore((s) => s.selectedAgent);
   const agentModels = useStore((s) => s.agentModels);
@@ -74,14 +69,10 @@ export function AppTopBar({
         )}
       </div>
       <div className="iis-topbar-actions">
-        {running && <RunProgressChip progress={running.progress} />}
         <IndustryAgentConnector
           selectedAgent={selectedAgent}
           selectedModel={selectedModel}
         />
-        <button className="iis-button iis-button-ghost" type="button">
-          <FolderOpen size={18} /> Open Folder
-        </button>
         <button className="iis-icon-button" type="button" aria-label="Settings">
           <Settings size={21} />
         </button>
@@ -205,15 +196,6 @@ function IndustryAgentConnector({
   );
 }
 
-export function RunProgressChip({ progress }: { progress: number }) {
-  return (
-    <span className="iis-progress-chip">
-      <RefreshCcw size={17} className="iis-spin-soft" />
-      Collection running - {progress}%
-    </span>
-  );
-}
-
 export function ProjectShell({
   projectId,
   projectName,
@@ -227,11 +209,30 @@ export function ProjectShell({
   section: string;
   children: React.ReactNode;
 }) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    setSidebarCollapsed(localStorage.getItem("iis-sidebar-collapsed") === "true");
+  }, []);
+
+  function toggleSidebar() {
+    setSidebarCollapsed((value) => {
+      const next = !value;
+      localStorage.setItem("iis-sidebar-collapsed", String(next));
+      return next;
+    });
+  }
+
   return (
     <main className="iis-app">
       <AppTopBar projectId={projectId} projectName={projectName} section={section} />
-      <div className="iis-project-frame">
-        <ProjectSidebar projectId={projectId} counts={counts} />
+      <div className={sidebarCollapsed ? "iis-project-frame collapsed" : "iis-project-frame"}>
+        <ProjectSidebar
+          projectId={projectId}
+          counts={counts}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleSidebar}
+        />
         <section className="iis-page">{children}</section>
       </div>
     </main>
@@ -241,9 +242,13 @@ export function ProjectShell({
 export function ProjectSidebar({
   projectId,
   counts: workspaceCounts,
+  collapsed = false,
+  onToggleCollapsed,
 }: {
   projectId: string;
   counts?: WorkspaceProjectCounts;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }) {
   const pathname = usePathname();
   const state = useIndustryStore((s) => s);
@@ -255,16 +260,33 @@ export function ProjectSidebar({
     { id: "reports", label: "Reports", icon: FileText, count: counts.reports },
   ];
   return (
-    <aside className="iis-sidebar">
+    <aside className={collapsed ? "iis-sidebar collapsed" : "iis-sidebar"}>
       <div>
-        <div className="iis-sidebar-label">Project</div>
+        <div className="iis-sidebar-head">
+          <div className="iis-sidebar-label">Project</div>
+          <button
+            className="iis-icon-button iis-sidebar-toggle"
+            type="button"
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+            title={collapsed ? "Expand navigation" : "Collapse navigation"}
+            onClick={onToggleCollapsed ?? (() => {})}
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        </div>
         <nav className="iis-nav">
           {items.map((item) => {
             const Icon = item.icon;
             const href = `/projects/${projectId}/${item.id}`;
             const active = pathname === href || pathname.startsWith(`${href}/`);
             return (
-              <Link key={item.id} href={href} className={active ? "iis-nav-item active" : "iis-nav-item"}>
+              <Link
+                key={item.id}
+                href={href}
+                className={active ? "iis-nav-item active" : "iis-nav-item"}
+                title={collapsed ? item.label : undefined}
+                aria-label={item.label}
+              >
                 <Icon size={21} />
                 <span>{item.label}</span>
                 {typeof item.count === "number" && <em>{item.count}</em>}
@@ -274,10 +296,12 @@ export function ProjectSidebar({
         </nav>
       </div>
       <div className="iis-sidebar-footer">
-        <button className="iis-sidebar-link" type="button">
-          <Settings size={19} /> Project Settings
-        </button>
-        <Link href="/" className="iis-sidebar-link">
+        <Link
+          href="/"
+          className="iis-sidebar-link"
+          title={collapsed ? "Back to All Projects" : undefined}
+          aria-label="Back to All Projects"
+        >
           <ArrowLeft size={19} /> Back to All Projects
         </Link>
       </div>

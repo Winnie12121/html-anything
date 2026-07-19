@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Automotive Semiconductor Hiring Comparison — China HR Market Insight</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+    background: #f5f6f8;
+    color: #1e293b;
+    line-height: 1.6;
+    font-size: 14px;
+  }
+  .report-container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 32px;
+  }
+  .report-header {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 36px 40px;
+    margin-bottom: 28px;
+  }
+  .report-header .tag-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .report-header .tag {
+    display: inline-block;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+  }
+  .report-header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 6px;
+  }
+  .report-header .meta {
+    font-size: 13px;
+    color: #64748b;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .report-header .meta span { white-space: nowrap; }
+
+  section {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 32px 40px;
+    margin-bottom: 20px;
+  }
+  section h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #eef2ff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  section h2 .section-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  section h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #334155;
+    margin: 20px 0 10px;
+  }
+  section h3:first-child { margin-top: 0; }
+
+  /* KPI row */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .kpi-card .kpi-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.1;
+  }
+  .kpi-card .kpi-label {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .kpi-card .kpi-sub {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #f8fafc; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .highlight { color: #2563eb; font-weight: 600; }
+
+  /* Bar chart (CSS) */
+  .bar-chart { margin: 16px 0; }
+  .bar-chart .bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .bar-chart .bar-label {
+    width: 260px;
+    font-size: 12px;
+    color: #475569;
+    text-align: right;
+    padding-right: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
+  .bar-chart .bar-track {
+    flex: 1;
+    background: #f1f5f9;
+    border-radius: 3px;
+    height: 22px;
+    position: relative;
+    overflow: hidden;
+    min-width: 60px;
+  }
+  .bar-chart .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: #2563eb;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    min-width: 28px;
+  }
+  .bar-chart .bar-fill.accent { background: #7c3aed; }
+  .bar-chart .bar-fill.muted { background: #94a3b8; }
+  .bar-chart .bar-value {
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  /* Insight callout */
+  .insight {
+    background: #eef2ff;
+    border-left: 3px solid #2563eb;
+    padding: 14px 18px;
+    border-radius: 0 6px 6px 0;
+    margin: 16px 0;
+    font-size: 13px;
+    color: #1e3a8a;
+  }
+  .insight strong { color: #1e40af; }
+
+  /* Paragraph text */
+  p { margin-bottom: 12px; color: #475569; font-size: 13.5px; }
+  p:last-child { margin-bottom: 0; }
+
+  /* Sources list */
+  .source-list { list-style: none; }
+  .source-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13px;
+  }
+  .source-list li:last-child { border-bottom: none; }
+  .source-list .source-title {
+    font-weight: 600;
+    color: #1e293b;
+  }
+  .source-list .source-url {
+    font-size: 11px;
+    color: #64748b;
+    word-break: break-all;
+  }
+  .source-list .source-note {
+    font-size: 11px;
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  /* Two column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 768px) {
+    .two-col { grid-template-columns: 1fr; }
+    .report-container { padding: 20px 16px; }
+    section { padding: 24px 20px; }
+    .bar-chart .bar-label { width: 160px; }
+  }
+
+  /* Footnote */
+  .footnote {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  /* Salary range indicator */
+  .salary-range {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .salary-high { background: #dcfce7; color: #166534; }
+  .salary-mid { background: #fef9c3; color: #854d0e; }
+  .salary-low { background: #f1f5f9; color: #475569; }
+</style>
+</head>
+<body>
+<div class="report-container">
+
+<!-- Report Header -->
+<header class="report-header">
+  <div class="tag-row">
+    <span class="tag">Automotive Semiconductor</span>
+    <span class="tag">China</span>
+    <span class="tag">HR Market Intelligence</span>
+  </div>
+  <h1>Automotive Semiconductor Hiring Comparison</h1>
+  <div class="meta">
+    <span>📅 Data collected: July 16, 2026</span>
+    <span>👥 Audience: HR Leadership</span>
+    <span>🌐 Region: China</span>
+    <span>📋 Template: Competitor Hiring Comparison</span>
+  </div>
+</header>
+
+<!-- Section 0: Executive Summary -->
+<section data-section-id="executive-summary">
+  <h2><span class="section-num">0</span> Executive Summary</h2>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-value">42</div>
+      <div class="kpi-label">Active Job Postings</div>
+      <div class="kpi-sub">Liepin, Jul 16 2026</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">33</div>
+      <div class="kpi-label">Hiring Companies</div>
+      <div class="kpi-sub">Across 15+ cities</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">8</div>
+      <div class="kpi-label">Top Company Openings</div>
+      <div class="kpi-sub">新凯来技术有限公司</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">¥60–90k</div>
+      <div class="kpi-label">Top Salary Band (Monthly)</div>
+      <div class="kpi-sub">Senior expert roles</div>
+    </div>
+  </div>
+
+  <p>The China automotive semiconductor talent market in mid-2026 reflects a sector in transition. With 42 active job postings across 33 companies captured on Liepin, hiring activity remains steady but increasingly selective. The market is shaped by three converging forces: <strong>aggressive domestic capacity expansion</strong> under China's chip self-sufficiency drive, <strong>deepening multinational R&D investment</strong> from global leaders, and a <strong>shift toward cautious, quality-over-quantity hiring</strong> after a period of rapid salary inflation.</p>
+
+  <div class="insight">
+    <strong>Key finding:</strong> Equipment engineering roles dominate hiring (11 of 42 postings, 26%), driven by fab expansion across Shanghai, Shenzhen, Wuhan, and Hefei. Shenzhen-based 新凯来 alone accounts for 8 openings — 19% of all listings — signaling an aggressive talent build-out at this major domestic equipment supplier.
+  </div>
+
+  <p>Multinational semiconductor firms continue to anchor R&D talent demand. NXP employs over 1,600 engineers across 6 design R&D centers in China; Texas Instruments maintains 2,200+ employees across 3 R&D centers and a manufacturing campus; Infineon has invested over USD $1 billion in China spanning R&D, production, and sales; STMicroelectronics and Renesas both operate dedicated automotive R&D centers. These incumbents compete with fast-growing domestic players like YMTC (长江存储), Wuhan Xinxin (武汉新芯), and TCL中环 for process integration engineers and equipment specialists.</p>
+
+  <p>On the compensation front, salary growth has moderated from its earlier peak. The 2025 Liepin semiconductor talent report notes that while salaries remain high relative to other manufacturing sectors, the pace of increase has slowed. Our sample shows a wide band: entry-level equipment technicians at ¥7–10k/month, mid-career process engineers at ¥18–30k, and senior strategic hires reaching ¥60–90k. Geographic concentration in <strong>Shanghai (15 postings, 36%)</strong> reflects the city's dominance as the industry's commercial and R&D hub, followed by Shenzhen (5), Wuhan (4), and Hefei (4).</p>
+
+  <p><strong>Bottom line for HR leadership:</strong> The talent market is competitive but no longer overheated. The window for securing experienced process and equipment engineers — particularly in Shanghai-Pudong and Shenzhen-Longgang — remains narrow. Companies that differentiate on career development and stability, rather than salary alone, will have an edge in the current cycle.</p>
+</section>
+
+<!-- Section 1: Hiring Volume & Company Coverage -->
+<section data-section-id="metric-job-volume">
+  <h2><span class="section-num">1</span> Hiring Volume &amp; Company Coverage</h2>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-value">42</div>
+      <div class="kpi-label">Total Job Postings</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">33</div>
+      <div class="kpi-label">Unique Companies</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">1.27</div>
+      <div class="kpi-label">Avg Postings / Company</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value">15</div>
+      <div class="kpi-label">Cities Covered</div>
+    </div>
+  </div>
+
+  <p>The sample of 42 semiconductor-related job postings spans a highly fragmented employer landscape. Only two companies posted more than two openings, underscoring that semiconductor hiring in China is distributed across many players rather than concentrated in a few mega-employers. The average of <strong>1.27 postings per company</strong> indicates that most firms are hiring selectively for specific roles rather than running broad recruitment campaigns.</p>
+
+  <h3>Role Category Breakdown</h3>
+  <table>
+    <thead>
+      <tr><th>Role Category</th><th class="num">Postings</th><th class="num">% of Total</th><th>Typical Salary Range (Monthly)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Equipment / Tool Engineering</td><td class="num highlight">11</td><td class="num">26.2%</td><td>¥7k – ¥45k</td></tr>
+      <tr><td>Process Integration / PIE</td><td class="num highlight">6</td><td class="num">14.3%</td><td>¥15k – ¥30k</td></tr>
+      <tr><td>Sales &amp; Business Development</td><td class="num">5</td><td class="num">11.9%</td><td>¥10k – ¥50k</td></tr>
+      <tr><td>Investment / Strategy</td><td class="num">4</td><td class="num">9.5%</td><td>¥15k – ¥90k</td></tr>
+      <tr><td>Engineering Management</td><td class="num">2</td><td class="num">4.8%</td><td>¥30k – ¥50k</td></tr>
+      <tr><td>HR / People</td><td class="num">2</td><td class="num">4.8%</td><td>¥10k – ¥25k</td></tr>
+      <tr><td>Procurement / Supply Chain</td><td class="num">2</td><td class="num">4.8%</td><td>¥4k – ¥25k</td></tr>
+      <tr><td>Other (Finance, Admin, Ops)</td><td class="num">10</td><td class="num">23.8%</td><td>¥7k – ¥30k</td></tr>
+    </tbody>
+  </table>
+
+  <div class="insight">
+    <strong>HR implication:</strong> Equipment and process engineering together account for 40% of all postings. These are hard-to-fill roles with long qualification lead times — companies competing for this talent should expect 60–90 day time-to-fill and should invest in proactive pipeline building rather than reactive posting.
+  </div>
+
+  <h3>Experience Level Distribution</h3>
+  <table>
+    <thead>
+      <tr><th>Experience Required</th><th class="num">Postings</th><th class="num">% of Total</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Entry level / No limit specified</td><td class="num">12</td><td class="num">28.6%</td></tr>
+      <tr><td>1–3 years</td><td class="num">8</td><td class="num">19.0%</td></tr>
+      <tr><td>3–5 years</td><td class="num">9</td><td class="num">21.4%</td></tr>
+      <tr><td>5–10 years</td><td class="num">10</td><td class="num">23.8%</td></tr>
+      <tr><td>10+ years</td><td class="num">3</td><td class="num">7.1%</td></tr>
+    </tbody>
+  </table>
+
+  <p>The experience distribution is relatively balanced, with a slight tilt toward senior roles. Nearly 31% of postings require 5+ years, indicating demand for seasoned professionals who can contribute immediately — consistent with the capital-intensive, quality-critical nature of semiconductor manufacturing. At the same time, 29% of postings are open to entry-level candidates (including those from 新凯来 and SK海力士大连), suggesting firms are also investing in building their talent pipeline from the ground up.</p>
+</section>
+
+<!-- Section 2: Hiring Activity by Company -->
+<section data-section-id="chart-company-comparison">
+  <h2><span class="section-num">2</span> Hiring Activity by Company</h2>
+
+  <p>The top 5 most active hirers account for 14 of 42 postings (33%). 深圳市新凯来技术有限公司 stands out with 8 openings — nearly <strong>one in five</strong> semiconductor job listings in this sample.</p>
+
+  <div class="two-col">
+    <div>
+      <h3>Top Companies by Posting Volume</h3>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <span class="bar-label" title="深圳市新凯来技术有限公司">深圳市新凯来技术有限公司</span>
+          <div class="bar-track"><div class="bar-fill" style="width:100%"><span class="bar-value">8</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label" title="益科德(上海)有限公司">益科德(上海)有限公司</span>
+          <div class="bar-track"><div class="bar-fill" style="width:37.5%"><span class="bar-value">3</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label" title="浙江华熔科技有限公司">浙江华熔科技有限公司</span>
+          <div class="bar-track"><div class="bar-fill accent" style="width:12.5%"><span class="bar-value">1</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label" title="上海常春藤投资控股有限公司">上海常春藤投资控股有限公司</span>
+          <div class="bar-track"><div class="bar-fill accent" style="width:12.5%"><span class="bar-value">1</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label" title="上海熹贾精密技术有限公司">上海熹贾精密技术有限公司</span>
+          <div class="bar-track"><div class="bar-fill accent" style="width:12.5%"><span class="bar-value">1</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3>新凯来 — Deep Dive</h3>
+      <table>
+        <thead><tr><th>Role</th><th>Location</th><th>Salary</th></tr></thead>
+        <tbody>
+          <tr><td>半导体设备研发工程师</td><td>上海-浦东新区</td><td>¥15–45k</td></tr>
+          <tr><td>半导体设备工程师</td><td>上海-浦东新区</td><td>¥15–40k·14薪</td></tr>
+          <tr><td>半导体设备工程师</td><td>上海-浦东新区</td><td>¥10–30k</td></tr>
+          <tr><td>半导体设备工程师</td><td>深圳-龙岗区</td><td>¥13–35k·15薪</td></tr>
+          <tr><td>半导体工艺工程师PVD</td><td>深圳-龙岗区</td><td>¥15–25k</td></tr>
+          <tr><td>半导体工艺工程师（研发岗）</td><td>深圳-龙岗区</td><td>¥16–45k·16薪</td></tr>
+          <tr><td>半导体集成装调工程师</td><td>深圳-龙岗区</td><td>¥9–12k·13薪</td></tr>
+          <tr><td>半导体设备工程师</td><td>合肥-经开区</td><td>¥20–30k·13薪</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="insight">
+    <strong>Competitive signal:</strong> 新凯来 is hiring across three cities (Shanghai, Shenzhen, Hefei) spanning R&D, process, and equipment roles — a pattern consistent with a company in a major capacity expansion phase. Their salary structure (13–16 months guaranteed) is above-market for Shenzhen-based equipment roles, likely putting upward pressure on competitor compensation. The two R&D-focused roles with 16-month guarantees at the top of their range (¥45k) suggest a particular urgency around advanced process development talent.
+  </div>
+
+  <h3>Full Company Roster (33 Companies)</h3>
+  <p style="font-size:12px;color:#64748b;margin-bottom:8px;">Companies with 1 posting unless noted. Grouped by sector.</p>
+  <table>
+    <thead>
+      <tr><th>Company</th><th>Posts</th><th>Sector</th><th>Sample Role</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>深圳市新凯来技术有限公司</td><td class="num highlight">8</td><td>Semiconductor Equipment</td><td>设备工程师 / 工艺工程师</td></tr>
+      <tr><td>益科德(上海)有限公司</td><td class="num highlight">3</td><td>Engineering / Construction</td><td>半导体设备工程师 (CVD)</td></tr>
+      <tr><td>武汉星曦光科技有限公司</td><td class="num">1</td><td>Semiconductor IC</td><td>采购工程师</td></tr>
+      <tr><td>长江存储科技有限责任公司</td><td class="num">1</td><td>Semiconductor IC</td><td>工艺整合工程师</td></tr>
+      <tr><td>武汉新芯集成电路股份有限公司</td><td class="num">1</td><td>Semiconductor IC</td><td>工艺整合工程师PIE</td></tr>
+      <tr><td>TCL中环</td><td class="num">1</td><td>Semiconductor IC</td><td>PIE工程师</td></tr>
+      <tr><td>SK海力士大连</td><td class="num">1</td><td>Semiconductor IC</td><td>半导体工程师</td></tr>
+      <tr><td>歌尔股份</td><td class="num">1</td><td>Semiconductor IC</td><td>半导体产业专家</td></tr>
+      <tr><td>JBD显耀显示科技</td><td class="num">1</td><td>Semiconductor IC</td><td>器件研发工程师</td></tr>
+      <tr><td>灵犀微光</td><td class="num">1</td><td>Semiconductor IC</td><td>工艺整合PIE</td></tr>
+      <tr><td>福建福顺半导体制造有限公司</td><td class="num">1</td><td>Semiconductor IC</td><td>封装设备维护工程师</td></tr>
+      <tr><td>浙江里阳半导体有限公司</td><td class="num">1</td><td>Semiconductor IC</td><td>计划经理</td></tr>
+      <tr><td>元成苏州</td><td class="num">1</td><td>Semiconductor IC</td><td>测试设备工程师</td></tr>
+      <tr><td>至微半导体(上海)有限公司</td><td class="num">1</td><td>Semiconductor Equipment</td><td>工程部经理</td></tr>
+      <tr><td>埃特曼半导体技术有限公司</td><td class="num">1</td><td>Semiconductor Equipment</td><td>人事经理</td></tr>
+      <tr><td>苏州索雷尔科技有限公司</td><td class="num">1</td><td>Mechanical / Equipment</td><td>工厂运营/厂长</td></tr>
+      <tr><td>大族激光</td><td class="num">1</td><td>Mechanical / Equipment</td><td>工艺工程师</td></tr>
+      <tr><td>上海至纯洁净系统科技</td><td class="num">1</td><td>Semiconductor IC</td><td>HRBP</td></tr>
+      <tr><td>浙江华熔科技有限公司</td><td class="num">1</td><td>Industrial Automation</td><td>销售经理</td></tr>
+      <tr><td>上海熹贾精密技术有限公司</td><td class="num">1</td><td>Technical Services</td><td>半导体销售总监</td></tr>
+      <tr><td>科百特</td><td class="num">1</td><td>Pharma / Filtration</td><td>销售工程师</td></tr>
+      <tr><td>湖南中伟控股集团有限公司</td><td class="num">1</td><td>New Energy</td><td>半导体战略投资专家</td></tr>
+      <tr><td>上海常春藤投资控股有限公司</td><td class="num">1</td><td>Fund / Securities</td><td>投资经理-AI/半导体</td></tr>
+      <tr><td>某基金证券公司</td><td class="num">1</td><td>Fund / Securities</td><td>券商私募子-半导体投资经理</td></tr>
+      <tr><td>资葳投资管理咨询(上海)</td><td class="num">1</td><td>Fund / Securities</td><td>Semiconductor Analyst</td></tr>
+      <tr><td>某知名电子/半导体公司</td><td class="num">1</td><td>Semiconductor IC</td><td>设备调测</td></tr>
+      <tr><td>某深圳电子/半导体公司</td><td class="num">1</td><td>Semiconductor IC</td><td>设备助理工程师</td></tr>
+      <tr><td>某深圳大型电子/半导体公司</td><td class="num">1</td><td>Semiconductor IC</td><td>厂商半导体设备工程师</td></tr>
+      <tr><td>某国内电子/半导体公司</td><td class="num">1</td><td>Semiconductor IC</td><td>财务经理</td></tr>
+      <tr><td>某西安电子/半导体公司</td><td class="num">1</td><td>Semiconductor IC</td><td>销售经理</td></tr>
+      <tr><td>某知名公司</td><td class="num">1</td><td>Real Estate / Agency</td><td>赴新加坡设备助理工程师</td></tr>
+      <tr><td>威海恒旺光伏发电服务</td><td class="num">1</td><td>New Energy</td><td>采购经理</td></tr>
+      <tr><td>成都林蜀麒商贸有限公司</td><td class="num">1</td><td>Trade</td><td>行政秘书</td></tr>
+    </tbody>
+  </table>
+
+  <p class="footnote">Note: Several companies post anonymously on Liepin ("某知名公司", "某深圳电子/半导体公司"). These 5 anonymized postings likely represent additional distinct employers, meaning the true company count may be higher than 33.</p>
+</section>
+
+<!-- Section 3: Geographic Distribution -->
+<section data-section-id="chart-location-distribution">
+  <h2><span class="section-num">3</span> Geographic Distribution</h2>
+
+  <p>Semiconductor hiring in China is heavily concentrated in established industry clusters. <strong>Shanghai dominates with 15 postings (36%)</strong> across six districts, reinforcing its position as China's premier semiconductor hub. The Yangtze River Delta (Shanghai + Suzhou + Hangzhou + Hefei + Wuxi) accounts for 24 of 42 postings (57%).</p>
+
+  <div class="two-col">
+    <div>
+      <h3>Top Locations by Posting Volume</h3>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <span class="bar-label">上海-浦东新区</span>
+          <div class="bar-track"><div class="bar-fill" style="width:100%"><span class="bar-value">7</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">深圳-龙岗区</span>
+          <div class="bar-track"><div class="bar-fill" style="width:57.1%"><span class="bar-value">4</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">武汉-洪山区</span>
+          <div class="bar-track"><div class="bar-fill accent" style="width:42.9%"><span class="bar-value">3</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">上海</span>
+          <div class="bar-track"><div class="bar-fill accent" style="width:42.9%"><span class="bar-value">3</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">上海-黄浦区</span>
+          <div class="bar-track"><div class="bar-fill muted" style="width:28.6%"><span class="bar-value">2</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3>City-Level Aggregation</h3>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <span class="bar-label">上海 (all districts)</span>
+          <div class="bar-track"><div class="bar-fill" style="width:100%"><span class="bar-value">15</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">深圳</span>
+          <div class="bar-track"><div class="bar-fill" style="width:33.3%"><span class="bar-value">5</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">武汉</span>
+          <div class="bar-track"><div class="bar-fill accent" style="width:26.7%"><span class="bar-value">4</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">合肥</span>
+          <div class="bar-track"><div class="bar-fill accent" style="width:26.7%"><span class="bar-value">4</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">苏州</span>
+          <div class="bar-track"><div class="bar-fill muted" style="width:13.3%"><span class="bar-value">2</span></div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">杭州</span>
+          <div class="bar-track"><div class="bar-fill muted" style="width:13.3%"><span class="bar-value">2</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Complete City Distribution</h3>
+  <table>
+    <thead>
+      <tr><th>City</th><th class="num">Postings</th><th class="num">%</th><th>Notable Employers</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Shanghai</td><td class="num highlight">15</td><td class="num">35.7%</td><td>新凯来, 益科德, 歌尔股份, 至微半导体, 湖南中伟</td></tr>
+      <tr><td>Shenzhen</td><td class="num">5</td><td class="num">11.9%</td><td>新凯来 (4 roles)</td></tr>
+      <tr><td>Wuhan</td><td class="num">4</td><td class="num">9.5%</td><td>长江存储, 武汉新芯, 益科德</td></tr>
+      <tr><td>Hefei</td><td class="num">4</td><td class="num">9.5%</td><td>新凯来, 益科德, JBD显耀, 科百特</td></tr>
+      <tr><td>Suzhou</td><td class="num">2</td><td class="num">4.8%</td><td>元成苏州, 苏州索雷尔</td></tr>
+      <tr><td>Hangzhou</td><td class="num">2</td><td class="num">4.8%</td><td>灵犀微光, 成都林蜀麒</td></tr>
+      <tr><td>Huzhou</td><td class="num">1</td><td class="num">2.4%</td><td>浙江华熔科技</td></tr>
+      <tr><td>Taizhou</td><td class="num">1</td><td class="num">2.4%</td><td>浙江里阳半导体</td></tr>
+      <tr><td>Wuxi</td><td class="num">1</td><td class="num">2.4%</td><td>TCL中环</td></tr>
+      <tr><td>Fuzhou</td><td class="num">1</td><td class="num">2.4%</td><td>福建福顺半导体</td></tr>
+      <tr><td>Dalian</td><td class="num">1</td><td class="num">2.4%</td><td>SK海力士大连</td></tr>
+      <tr><td>Beijing</td><td class="num">1</td><td class="num">2.4%</td><td>埃特曼半导体技术</td></tr>
+      <tr><td>Guangzhou</td><td class="num">1</td><td class="num">2.4%</td><td>大族激光</td></tr>
+      <tr><td>Xi'an</td><td class="num">1</td><td class="num">2.4%</td><td>某西安半导体公司</td></tr>
+      <tr><td>Jinan</td><td class="num">1</td><td class="num">2.4%</td><td>某国内半导体公司</td></tr>
+      <tr><td>Tai'an</td><td class="num">1</td><td class="num">2.4%</td><td>威海恒旺光伏</td></tr>
+    </tbody>
+  </table>
+
+  <div class="insight">
+    <strong>HR implication:</strong> Shanghai's dominance as a hiring hub — particularly Pudong district — means talent poaching risk is highest there. Companies hiring outside the Yangtze River Delta (Wuhan, Hefei, Dalian, Xi'an) may find less direct competition but a smaller available talent pool. Hefei's emergence (4 postings) reflects its growing status as a "new semiconductor city" fueled by government investment and BOE/Nexchip ecosystem effects.
+  </div>
+
+  <h3>Major Multinational R&D Footprint (Context)</h3>
+  <p>Beyond the 42 active postings sampled from Liepin, the broader competitive landscape includes significant R&D headcount from global semiconductor firms. These established presences represent both a source of experienced talent (for poaching) and a competitor for new hires:</p>
+  <table>
+    <thead>
+      <tr><th>Company</th><th>China R&D Centers</th><th>Est. China Headcount</th><th>Key China Cities</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>NXP Semiconductors</td><td class="num">6</td><td class="num">1,600+ engineers</td><td>Shanghai, Beijing, Shenzhen, Suzhou, Tianjin</td></tr>
+      <tr><td>Texas Instruments</td><td class="num">3</td><td class="num">2,200+</td><td>Shanghai, Shenzhen, Beijing + Chengdu mfg.</td></tr>
+      <tr><td>Infineon Technologies</td><td class="num">2+</td><td class="num">1,000–2,000</td><td>Shanghai (Greater China HQ), Xi'an</td></tr>
+      <tr><td>STMicroelectronics</td><td class="num">Multiple</td><td class="num">—</td><td>Shanghai, Shenzhen, Beijing</td></tr>
+      <tr><td>Renesas Electronics</td><td class="num">Multiple</td><td class="num">2,000–5,000</td><td>Beijing, Shanghai, Suzhou</td></tr>
+    </tbody>
+  </table>
+  <p class="footnote">Headcount estimates sourced from company pages and Tavily search reports, Jul 2026. Figures may include non-R&D functions.</p>
+</section>
+
+<!-- Section 4: Compensation & Market Signals -->
+<section data-section-id="chart-company-comparison">
+  <h2><span class="section-num">+</span> Compensation Benchmarks &amp; Market Signals</h2>
+
+  <h3>Salary Distribution by Role Level</h3>
+  <table>
+    <thead>
+      <tr><th>Level</th><th>Monthly Salary Range</th><th>Example Roles</th><th>Typical Guaranteed Months</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Entry / Technician</td><td><span class="salary-range salary-low">¥7k – ¥15k</span></td><td>设备助理工程师, 集成装调工程师, 封装维护</td><td>13–14薪</td></tr>
+      <tr><td>Mid-Level Engineer</td><td><span class="salary-range salary-mid">¥15k – ¥30k</span></td><td>半导体设备工程师, 工艺整合PIE, 测试设备</td><td>13–15薪</td></tr>
+      <tr><td>Senior Engineer / Lead</td><td><span class="salary-range salary-mid">¥30k – ¥50k</span></td><td>设备研发工程师, 工厂运营/厂长, 工程部经理</td><td>14–16薪</td></tr>
+      <tr><td>Expert / Strategic</td><td><span class="salary-range salary-high">¥60k – ¥90k</span></td><td>半导体产业专家, 半导体战略投资专家</td><td>17薪</td></tr>
+    </tbody>
+  </table>
+
+  <div class="insight">
+    <strong>Compensation trend:</strong> The Liepin 2025 semiconductor talent report confirms that salary growth has decelerated after a period of rapid inflation. Companies are shifting from aggressive salary bidding to more sustainable total-reward packages. The prevalence of 13–16 month guaranteed structures (seen at 新凯来, TCL中环, SK海力士, 长江存储, etc.) means annualized compensation is typically 8–33% above the stated monthly figure — a critical factor for offer benchmarking.
+  </div>
+
+  <h3>Key Market Signals from Web Research</h3>
+  <table>
+    <thead>
+      <tr><th>Signal</th><th>Source</th><th>HR Relevance</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>China semiconductor market to reach ¥1.8T in 2025 (+8.6% YoY)</td>
+        <td>Liepin / 发现报告 (Nov 2025)</td>
+        <td>Sustained market growth supports continued hiring demand</td>
+      </tr>
+      <tr>
+        <td>Global market at $697B (+11.2% YoY), AI chips &amp; auto electronics driving growth</td>
+        <td>Liepin / Fortune Business Insights</td>
+        <td>Global tailwinds reinforce China talent demand</td>
+      </tr>
+      <tr>
+        <td>Government chip self-sufficiency policy accelerating domestic hiring</td>
+        <td>Multiple Tavily reports</td>
+        <td>Domestic firms growing faster than MNCs; talent competition intensifying</td>
+      </tr>
+      <tr>
+        <td>Hiring shifting toward "cautious" practices after rapid growth period</td>
+        <td>Tavily synthesis</td>
+        <td>Quality-of-hire and retention now prioritized over volume</td>
+      </tr>
+      <tr>
+        <td>TI China R&D center restructured MCU team (30–40 people) in 2022</td>
+        <td>Sohu / Economic Observer</td>
+        <td>Even large MNCs adjust China R&D footprint; talent displacement creates opportunities</td>
+      </tr>
+      <tr>
+        <td>NXP, Infineon, ST, Renesas all actively hiring in China</td>
+        <td>Liepin company pages</td>
+        <td>MNC competition for experienced engineers remains strong</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>The market picture is one of <strong>maturing demand</strong>: the era of frenzied salary escalation (common during 2020–2023) has given way to more measured, strategic hiring. Companies that invested early in employer branding and talent development are better positioned. For HR leaders, the current window favors building robust talent pipelines and strengthening retention — the next growth surge, driven by EV adoption and AI chip demand, will likely tighten the market again.</p>
+</section>
+
+<!-- Section 5: Sources -->
+<section data-section-id="sources">
+  <h2><span class="section-num">4</span> Sources</h2>
+
+  <p style="margin-bottom:16px;">This report is based on 42 job postings from Liepin ( crawled July 16, 2026) and 12 web research reports from Tavily Search (run July 19, 2026). All job data reflects publicly listed positions and may undercount roles filled through internal mobility, headhunters, or unlisted channels.</p>
+
+  <h3>Job Market Data</h3>
+  <ul class="source-list">
+    <li>
+      <div class="source-title">Liepin (猎聘) — 42 semiconductor job postings</div>
+      <div class="source-url">https://www.liepin.com — searched with keyword "半导体"</div>
+      <div class="source-note">Crawled 2026-07-16. Covers 33 companies, 15 cities. Postings were active within 24 hours of crawl time.</div>
+    </li>
+  </ul>
+
+  <h3>Web Research Reports (Tavily)</h3>
+  <ul class="source-list">
+    <li>
+      <div class="source-title">[猎聘] 半导体产业人才供需洞察报告</div>
+      <div class="source-url">https://www.fxbaogao.com/detail/5221828</div>
+      <div class="source-note">Industry talent supply-demand report by Liepin, Nov 2025. Market sizing and salary trend data.</div>
+    </li>
+    <li>
+      <div class="source-title">Automotive Semiconductor Market Report [2032] — Fortune Business Insights</div>
+      <div class="source-url">https://www.fortunebusinessinsights.com/zh/automotive-semiconductor-market-106780</div>
+      <div class="source-note">Global market forecast with China segment analysis.</div>
+    </li>
+    <li>
+      <div class="source-title">瑞萨电子（中国）有限公司 — Baidu Baike</div>
+      <div class="source-url">https://baike.baidu.com/item/瑞萨电子（中国）有限公司/21054267</div>
+      <div class="source-note">Renesas China operations, R&D center details, MCU/SoC focus.</div>
+    </li>
+    <li>
+      <div class="source-title">瑞萨半导体(中国) 招聘 — Liepin company page</div>
+      <div class="source-url">https://m.liepin.com/company/12159461</div>
+      <div class="source-note">Renesas China hiring overview, 2,000–5,000 employees in China.</div>
+    </li>
+    <li>
+      <div class="source-title">恩智浦在中国 / NXP in China — Southeast University</div>
+      <div class="source-url">https://cs.seu.edu.cn/_upload/article/files/af/3c/62bd8ae74d66a3cef9690c9e78b8/e168c2ca-beca-40d4-9803-723a3717f60a.pdf</div>
+      <div class="source-note">NXP China overview: 6 design R&D centers, 1,600+ engineers, 14 city offices.</div>
+    </li>
+    <li>
+      <div class="source-title">恩智浦(中国)管理有限公司 招聘 — Liepin company page</div>
+      <div class="source-url">https://m.liepin.com/company/8638663</div>
+      <div class="source-note">NXP China hiring: 39 active positions, benefits overview.</div>
+    </li>
+    <li>
+      <div class="source-title">德州仪器中国研发中心调整背后 — Sohu / 经济观察报</div>
+      <div class="source-url">https://www.sohu.com/a/549233819_118622</div>
+      <div class="source-note">TI China R&D center restructuring (2022), MCU team transition. 2,200+ China employees.</div>
+    </li>
+    <li>
+      <div class="source-title">德州仪器半导体技术(上海)有限公司 招聘 — Liepin company page</div>
+      <div class="source-url">https://m.liepin.com/company/9682057</div>
+      <div class="source-note">TI China hiring: 54 positions, 17 sales offices, 3 R&D centers, Chengdu manufacturing.</div>
+    </li>
+    <li>
+      <div class="source-title">意法半导体官网 — STMicroelectronics</div>
+      <div class="source-url">https://www.st.com.cn/content/st_com/zh.html</div>
+      <div class="source-note">ST China careers page, R&D and manufacturing presence.</div>
+    </li>
+    <li>
+      <div class="source-title">意法半导体中国 招聘 — Liepin company page</div>
+      <div class="source-url">https://m.liepin.com/company/8957641</div>
+      <div class="source-note">ST China hiring: 10,000+ global employees, multiple China locations.</div>
+    </li>
+    <li>
+      <div class="source-title">英飞凌 — Baidu Baike / Infineon Community</div>
+      <div class="source-url">https://baike.baidu.com/item/英飞凌/7668360</div>
+      <div class="source-note">Infineon China: $1B+ investment, Shanghai Greater China HQ, Xi'an R&D center.</div>
+    </li>
+    <li>
+      <div class="source-title">英飞凌科技(中国)有限公司 招聘 — Liepin company page</div>
+      <div class="source-url">https://m.liepin.com/company/12438767</div>
+      <div class="source-note">Infineon China hiring: Principal FAE MCU, Automotive EMC Engineer roles.</div>
+    </li>
+  </ul>
+
+  <p class="footnote">
+    <strong>Data limitations:</strong> This report is based on a snapshot of publicly listed Liepin postings from a single day (Jul 16, 2026) and 12 Tavily web search summaries (Jul 19, 2026). It does not include internal referrals, executive search mandates, WeChat/company career-page-only listings, or roles filled through campus recruitment. Company headcount figures are approximate and sourced from company communications and third-party reports. All salary figures are in RMB (CNY) per month unless otherwise noted. "N薪" (e.g., 14薪) indicates the guaranteed number of monthly salary payments per year.
+  </p>
+</section>
+
+</div>
+</body>
+</html>

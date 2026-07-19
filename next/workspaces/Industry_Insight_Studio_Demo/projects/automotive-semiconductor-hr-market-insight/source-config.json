@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "liepin",
+      "type": "liepin",
+      "displayName": "Liepin scraper",
+      "description": "Collect and normalize Liepin job listings for tracked companies.",
+      "enabled": true,
+      "config": {
+        "companies": [
+          "英飞凌",
+          "意法半导体",
+          "德州仪器",
+          "恩智浦",
+          "瑞萨电子",
+          "安森美",
+          "高通",
+          "博通",
+          "ADI",
+          "微芯科技"
+        ],
+        "keywords": [
+          "半导体",
+          "汽车半导体",
+          "车规芯片",
+          "SiC",
+          "GaN",
+          "MCU",
+          "功率器件",
+          "模拟芯片",
+          "传感器",
+          "ADAS",
+          "座舱SoC",
+          "功能安全",
+          "800V"
+        ]
+      },
+      "lastRunId": "RUN-20260719-002"
+    },
+    {
+      "id": "tavily",
+      "type": "tavily",
+      "displayName": "Tavily Search",
+      "description": "Search industry news, company activity, hiring trends, and market signals.",
+      "enabled": true,
+      "config": {
+        "topics": [
+          "英飞凌 中国 Automotive Semiconductor 招聘",
+          "英飞凌 中国 Automotive Semiconductor 投资 研发中心",
+          "意法半导体 中国 Automotive Semiconductor 招聘",
+          "意法半导体 中国 Automotive Semiconductor 投资 研发中心",
+          "德州仪器 中国 Automotive Semiconductor 招聘",
+          "德州仪器 中国 Automotive Semiconductor 投资 研发中心",
+          "恩智浦 中国 Automotive Semiconductor 招聘",
+          "恩智浦 中国 Automotive Semiconductor 投资 研发中心",
+          "瑞萨电子 中国 Automotive Semiconductor 招聘",
+          "瑞萨电子 中国 Automotive Semiconductor 投资 研发中心",
+          "Automotive Semiconductor 人才需求 中国",
+          "Automotive Semiconductor 薪资 招聘趋势 中国"
+        ]
+      },
+      "lastRunId": "RUN-20260719-002"
+    }
+  ]
+}

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runMockExternalCollection } from "@/lib/industry/workspace";
+import {
+  runExternalCollection,
+  type WorkspaceRunEvent,
+} from "@/lib/industry/workspace";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,13 +23,33 @@ export async function POST(
     ? body.sourceIds.filter((sourceId): sourceId is string => typeof sourceId === "string")
     : [];
 
-  try {
-    const result = await runMockExternalCollection(projectId, sourceIds);
-    return NextResponse.json(result, { status: 201 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
-      { status: 500 },
-    );
-  }
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      function emit(event: WorkspaceRunEvent) {
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      }
+
+      try {
+        await runExternalCollection(projectId, sourceIds, { onEvent: emit });
+      } catch (error) {
+        controller.enqueue(
+          encoder.encode(JSON.stringify({
+            type: "failed",
+            error: error instanceof Error ? error.message : String(error),
+          }) + "\n"),
+        );
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    status: 201,
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
 }

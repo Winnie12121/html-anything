@@ -1,0 +1,18 @@
+{"at":"2026-07-19T15:49:31.706Z","level":"info","message":"Collection started"}
+{"at":"2026-07-19T15:49:31.708Z","level":"info","message":"Loading Liepin CSV sample"}
+{"at":"2026-07-19T15:49:31.724Z","level":"info","message":"Liepin CSV normalized 42 records (42 new or updated)"}
+{"at":"2026-07-19T15:49:31.728Z","level":"info","message":"Running Tavily Search for 12 topics"}
+{"at":"2026-07-19T15:49:31.741Z","level":"info","message":"Searching: 英飞凌 中国 Automotive Semiconductor 招聘"}
+{"at":"2026-07-19T15:50:01.872Z","level":"info","message":"Searching: 英飞凌 中国 Automotive Semiconductor 投资 研发中心"}
+{"at":"2026-07-19T15:50:16.572Z","level":"info","message":"Searching: 意法半导体 中国 Automotive Semiconductor 招聘"}
+{"at":"2026-07-19T15:50:27.047Z","level":"info","message":"Searching: 意法半导体 中国 Automotive Semiconductor 投资 研发中心"}
+{"at":"2026-07-19T15:50:43.892Z","level":"info","message":"Searching: 德州仪器 中国 Automotive Semiconductor 招聘"}
+{"at":"2026-07-19T15:50:54.791Z","level":"info","message":"Searching: 德州仪器 中国 Automotive Semiconductor 投资 研发中心"}
+{"at":"2026-07-19T15:51:03.910Z","level":"info","message":"Searching: 恩智浦 中国 Automotive Semiconductor 招聘"}
+{"at":"2026-07-19T15:51:10.283Z","level":"info","message":"Searching: 恩智浦 中国 Automotive Semiconductor 投资 研发中心"}
+{"at":"2026-07-19T15:51:13.358Z","level":"info","message":"Searching: 瑞萨电子 中国 Automotive Semiconductor 招聘"}
+{"at":"2026-07-19T15:51:20.893Z","level":"info","message":"Searching: 瑞萨电子 中国 Automotive Semiconductor 投资 研发中心"}
+{"at":"2026-07-19T15:51:31.345Z","level":"info","message":"Searching: Automotive Semiconductor 人才需求 中国"}
+{"at":"2026-07-19T15:51:56.263Z","level":"info","message":"Searching: Automotive Semiconductor 薪资 招聘趋势 中国"}
+{"at":"2026-07-19T15:52:03.019Z","level":"info","message":"Tavily Search wrote 12 markdown reports (12 new or updated)"}
+{"at":"2026-07-19T15:52:03.021Z","level":"info","message":"Collection completed with 54 records"}

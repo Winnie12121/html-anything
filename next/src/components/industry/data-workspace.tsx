@@ -3,16 +3,18 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Database, ExternalLink, FileText, Image, Search } from "lucide-react";
+import DOMPurify from "dompurify";
+import { CheckSquare, ExternalLink, FileText, Image, Search, X } from "lucide-react";
+import { marked } from "marked";
 import type {
-  WorkspaceDataKind,
   WorkspaceDataRecord,
   WorkspaceDataView,
 } from "@/lib/industry/workspace/client";
 import { formatWorkspaceDataKind } from "@/lib/industry/workspace/client";
 import { ProjectShell } from "./shell";
 
-type SourceFilter = "all" | WorkspaceDataKind;
+type SourceFilter = "job" | "news";
+type SelectionFilter = "all" | "selected";
 
 export function DataWorkspacePage({
   projectId,
@@ -22,13 +24,22 @@ export function DataWorkspacePage({
   dataView?: WorkspaceDataView;
 }) {
   const router = useRouter();
-  const [selectedSourceId, setSelectedSourceId] = useState<SourceFilter>("all");
+  const initialSourceId: SourceFilter =
+    (dataView?.sourceCounts.job ?? 0) > 0 ? "job" : "news";
+  const [selectedSourceId, setSelectedSourceId] = useState<SourceFilter>(initialSourceId);
   const [activeRecordId, setActiveRecordId] = useState<string | undefined>(
     dataView?.records[0]?.id,
   );
   const [selectedRefs, setSelectedRefs] = useState<string[]>(
-    dataView?.selection.selectedRecordRefs ?? [],
+    dataView?.selection.selectedRecordRefs.length
+      ? dataView.selection.selectedRecordRefs
+      : dataView?.records.map((record) => record.ref) ?? [],
   );
+  const [selectionFilter, setSelectionFilter] = useState<SelectionFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [companyFilter, setCompanyFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,15 +54,24 @@ export function DataWorkspacePage({
   }
 
   const selectedSet = new Set(selectedRefs);
-  const filtered =
-    selectedSourceId === "all"
-      ? dataView.records
-      : dataView.records.filter((record) => record.kind === selectedSourceId);
+  const sectionRecords = dataView.records.filter((record) =>
+    selectedSourceId === "job" ? record.kind === "job" : record.kind !== "job",
+  );
+  const filtered = sectionRecords.filter((record) =>
+    matchesSearch(record, searchQuery) &&
+    matchesFieldFilter(record, "company", companyFilter) &&
+    matchesLocationFilter(record, locationFilter) &&
+    (selectionFilter === "all" || selectedSet.has(record.ref)),
+  );
   const activeRecord =
-    dataView.records.find((record) => record.id === activeRecordId) ??
+    filtered.find((record) => record.id === activeRecordId) ??
     filtered[0] ??
     dataView.records[0];
-  const selectedCounts = countSelectedByKind(dataView.records, selectedSet);
+  const sectionCounts = countBySection(dataView.records);
+  const selectedCounts = countSelectedBySection(dataView.records, selectedSet);
+  const visibleRefs = filtered.map((record) => record.ref);
+  const allVisibleSelected =
+    visibleRefs.length > 0 && visibleRefs.every((ref) => selectedSet.has(ref));
 
   async function persistSelection(nextRefs: string[]) {
     setSelectedRefs(nextRefs);
@@ -80,6 +100,22 @@ export function DataWorkspacePage({
     void persistSelection(next);
   }
 
+  function toggleVisibleRecords() {
+    if (!visibleRefs.length) return;
+    const visibleSet = new Set(visibleRefs);
+    const next = allVisibleSelected
+      ? selectedRefs.filter((ref) => !visibleSet.has(ref))
+      : Array.from(new Set([...selectedRefs, ...visibleRefs]));
+    void persistSelection(next);
+  }
+
+  function clearFilters() {
+    setSearchQuery("");
+    setSelectionFilter("all");
+    setCompanyFilter("");
+    setLocationFilter("");
+  }
+
   return (
     <ProjectShell
       projectId={projectId}
@@ -90,19 +126,11 @@ export function DataWorkspacePage({
       <div className="iis-data-shell">
         <aside className="iis-data-sources">
           <h2>Data Sources</h2>
-          <DataSourceButton
-            active={selectedSourceId === "all"}
-            label="All Data"
-            count={dataView.sourceCounts.all}
-            selectedCount={selectedRefs.length}
-            icon={<Database size={16} />}
-            onClick={() => setSelectedSourceId("all")}
-          />
           <DataSourceGroup title="External">
             <DataSourceButton
               active={selectedSourceId === "job"}
               label="Jobs"
-              count={dataView.sourceCounts.job}
+              count={sectionCounts.job}
               selectedCount={selectedCounts.job}
               icon={<FileText size={16} />}
               onClick={() => setSelectedSourceId("job")}
@@ -110,18 +138,10 @@ export function DataWorkspacePage({
             <DataSourceButton
               active={selectedSourceId === "news"}
               label="News"
-              count={dataView.sourceCounts.news}
+              count={sectionCounts.news}
               selectedCount={selectedCounts.news}
               icon={<FileText size={16} />}
               onClick={() => setSelectedSourceId("news")}
-            />
-            <DataSourceButton
-              active={selectedSourceId === "web_page"}
-              label="Web Pages"
-              count={dataView.sourceCounts.web_page}
-              selectedCount={selectedCounts.web_page}
-              icon={<ExternalLink size={16} />}
-              onClick={() => setSelectedSourceId("web_page")}
             />
           </DataSourceGroup>
           <DataSourceGroup title="Uploaded">
@@ -139,26 +159,80 @@ export function DataWorkspacePage({
         <section className="iis-data-preview">
           <div className="iis-page-header">
             <div>
-              <h1>{selectedSourceId === "all" ? "All Data" : formatWorkspaceDataKind(selectedSourceId)}</h1>
-              <p>{filtered.length} records</p>
+              <h1>{formatSectionLabel(selectedSourceId)}</h1>
+              <p>{filtered.length} of {sectionRecords.length} records</p>
             </div>
           </div>
           <div className="iis-data-toolbar">
-            <button className="iis-search-button" type="button" aria-label="Search">
+            <label className="iis-data-search-field">
               <Search size={18} />
-            </button>
-            <select defaultValue="all">
+              <input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search records"
+                type="search"
+              />
+            </label>
+            <select
+              value={selectionFilter}
+              onChange={(event) => setSelectionFilter(event.target.value as SelectionFilter)}
+            >
               <option value="all">All</option>
               <option value="selected">Selected</option>
             </select>
-            <button className="iis-button iis-button-ghost" type="button">More Filters</button>
+            <button
+              className="iis-button iis-button-ghost"
+              type="button"
+              onClick={() => setShowFilters((value) => !value)}
+            >
+              More Filters
+            </button>
+            <button
+              className="iis-button iis-button-ghost"
+              type="button"
+              disabled={visibleRefs.length === 0}
+              onClick={toggleVisibleRecords}
+            >
+              <CheckSquare size={18} />
+              {allVisibleSelected ? "Clear Visible" : "Select Visible"}
+            </button>
           </div>
+          {showFilters && (
+            <div className="iis-data-filter-panel">
+              <label>
+                Company
+                <input
+                  value={companyFilter}
+                  onChange={(event) => setCompanyFilter(event.target.value)}
+                  placeholder="Any company"
+                />
+              </label>
+              <label>
+                Location / Region
+                <input
+                  value={locationFilter}
+                  onChange={(event) => setLocationFilter(event.target.value)}
+                  placeholder="Any location"
+                />
+              </label>
+              <button
+                className="iis-button iis-button-ghost"
+                type="button"
+                onClick={clearFilters}
+              >
+                <X size={18} /> Clear
+              </button>
+            </div>
+          )}
           <StructuredRecordsTable
+            section={selectedSourceId}
             records={filtered}
             activeRecordId={activeRecord?.id}
             selectedRefs={selectedSet}
             onActivate={setActiveRecordId}
             onToggle={toggleRecord}
+            onToggleAll={toggleVisibleRecords}
+            allVisibleSelected={allVisibleSelected}
           />
         </section>
 
@@ -219,68 +293,107 @@ function DataSourceButton({
 }
 
 function StructuredRecordsTable({
+  section,
   records,
   activeRecordId,
   selectedRefs,
   onActivate,
   onToggle,
+  onToggleAll,
+  allVisibleSelected,
 }: {
+  section: SourceFilter;
   records: WorkspaceDataRecord[];
   activeRecordId?: string;
   selectedRefs: Set<string>;
   onActivate: (recordId: string) => void;
   onToggle: (ref: string) => void;
+  onToggleAll: () => void;
+  allVisibleSelected: boolean;
 }) {
+  const isJobs = section === "job";
+
   return (
-    <table className="iis-data-table">
-      <thead>
-        <tr>
-          <th><input type="checkbox" aria-label="Select all" /></th>
-          <th>Title</th>
-          <th>Company</th>
-          <th>Location</th>
-          <th>Kind</th>
-        </tr>
-      </thead>
-      <tbody>
-        {records.length ? (
-          records.map((record) => {
-            const checked = selectedRefs.has(record.ref);
-            return (
-              <tr
-                key={record.ref}
-                className={activeRecordId === record.id ? "active" : ""}
-                onClick={() => onActivate(record.id)}
-              >
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(event) => {
-                      event.stopPropagation();
-                      onToggle(record.ref);
-                    }}
-                    onClick={(event) => event.stopPropagation()}
-                    aria-label={`Select ${record.title}`}
-                  />
-                </td>
-                <td>
-                  <strong>{record.title}</strong>
-                  <small>{record.summary}</small>
-                </td>
-                <td>{String(record.fields.company ?? "-")}</td>
-                <td>{String(record.fields.location ?? record.fields.region ?? "-")}</td>
-                <td>{formatWorkspaceDataKind(record.kind)}</td>
-              </tr>
-            );
-          })
-        ) : (
+    <div className="iis-data-table-wrap">
+      <table className={isJobs ? "iis-data-table" : "iis-data-table iis-data-table-news"}>
+        <thead>
           <tr>
-            <td colSpan={5}>No data collected yet.</td>
+            <th>
+              <input
+                type="checkbox"
+                aria-label={allVisibleSelected ? "Clear visible records" : "Select visible records"}
+                checked={allVisibleSelected}
+                onChange={onToggleAll}
+              />
+            </th>
+            <th>Title</th>
+            {isJobs ? (
+              <>
+                <th>Company</th>
+                <th>Location</th>
+                <th>Salary</th>
+                <th>Experience</th>
+                <th>Education</th>
+              </>
+            ) : (
+              <>
+                <th>Source</th>
+                <th>Report</th>
+              </>
+            )}
           </tr>
-        )}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {records.length ? (
+            records.map((record) => {
+              const checked = selectedRefs.has(record.ref);
+              return (
+                <tr
+                  key={record.ref}
+                  className={activeRecordId === record.id ? "active" : ""}
+                  onClick={() => onActivate(record.id)}
+                >
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) => {
+                        event.stopPropagation();
+                        onToggle(record.ref);
+                      }}
+                      onClick={(event) => event.stopPropagation()}
+                      aria-label={`Select ${record.title}`}
+                    />
+                  </td>
+                  <td>
+                    <strong>{record.title}</strong>
+                    <small>{record.summary}</small>
+                  </td>
+                  {isJobs ? (
+                    <>
+                      <td>{String(record.fields.company ?? "-")}</td>
+                      <td>{String(record.fields.location ?? record.fields.region ?? "-")}</td>
+                      <td>{String(record.fields.salary ?? "-")}</td>
+                      <td>{String(record.fields.experience ?? "-")}</td>
+                      <td>{String(record.fields.education ?? "-")}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td>{formatRecordSource(record)}</td>
+                      <td>{formatReportLabel(record.fields.reportPath)}</td>
+                    </>
+                  )}
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td colSpan={isJobs ? 7 : 4}>No data collected yet.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -293,6 +406,22 @@ function DataDetailsPanel({
   checked: boolean;
   onToggle: () => void;
 }) {
+  const [tab, setTab] = useState<"details" | "raw">("details");
+  const isMarkdownRecord = Boolean(
+    record &&
+    (record.sourceId === "tavily" ||
+      (record.kind === "web_page" && typeof record.fields.reportPath === "string")),
+  );
+  const markdownHtml = useMemo(() => {
+    if (!record || !isMarkdownRecord) return "";
+    const html = marked.parse(record.rawText, {
+      async: false,
+      gfm: true,
+      breaks: false,
+    }) as string;
+    return DOMPurify.sanitize(html);
+  }, [isMarkdownRecord, record]);
+
   if (!record) {
     return (
       <aside className="iis-data-details">
@@ -304,25 +433,53 @@ function DataDetailsPanel({
   return (
     <aside className="iis-data-details">
       <div className="iis-tabs-flat">
-        <button className="active" type="button">Details</button>
-        <button type="button">Raw</button>
+        <button
+          className={tab === "details" ? "active" : ""}
+          type="button"
+          onClick={() => setTab("details")}
+        >
+          Details
+        </button>
+        <button
+          className={tab === "raw" ? "active" : ""}
+          type="button"
+          onClick={() => setTab("raw")}
+        >
+          Raw
+        </button>
       </div>
       <h2>{record.title}</h2>
-      <p>{String(record.fields.company ?? formatWorkspaceDataKind(record.kind))} · {String(record.fields.location ?? record.fields.region ?? "Project data")}</p>
+      <p>{formatRecordSubtitle(record)}</p>
       <dl>
         <div>
           <dt>Source</dt>
-          <dd>{record.url ?? record.sourceId}</dd>
+          <dd>{formatRecordSource(record)}</dd>
         </div>
-        {Object.entries(record.fields).map(([key, value]) => (
+        {getDetailFields(record).map(([key, value]) => (
           <div key={key}>
             <dt>{key}</dt>
             <dd>{Array.isArray(value) ? value.join(", ") : String(value ?? "-")}</dd>
           </div>
         ))}
       </dl>
-      <h3>{record.kind === "job" ? "Job Description" : "Preview"}</h3>
-      <p>{record.rawText}</p>
+      {tab === "details" ? (
+        <>
+          <h3>{record.kind === "job" ? "Job Description" : "Preview"}</h3>
+          {isMarkdownRecord ? (
+            <div
+              className="iis-markdown-preview"
+              dangerouslySetInnerHTML={{ __html: markdownHtml }}
+            />
+          ) : (
+            <p className="iis-record-text">{record.rawText}</p>
+          )}
+        </>
+      ) : (
+        <>
+          <h3>Raw</h3>
+          <pre className="iis-raw-preview">{record.rawText}</pre>
+        </>
+      )}
       {record.url && (
         <a className="iis-open-source" href={record.url} target="_blank" rel="noreferrer">
           <ExternalLink size={18} /> Open Source
@@ -349,7 +506,7 @@ function SelectionSummaryBar({
 }: {
   projectId: string;
   selectedCount: number;
-  counts: Record<WorkspaceDataKind, number>;
+  counts: Record<SourceFilter, number>;
   saving: boolean;
   error: string | null;
 }) {
@@ -360,7 +517,7 @@ function SelectionSummaryBar({
         {Object.entries(counts)
           .filter(([, count]) => count > 0)
           .map(([kind, count]) => (
-            <span key={kind}>{count} {formatWorkspaceDataKind(kind as WorkspaceDataKind)}</span>
+            <span key={kind}>{count} {formatSectionLabel(kind as SourceFilter)}</span>
           ))}
         {saving && <span>Saving...</span>}
         {error && <span className="iis-selection-error">{error}</span>}
@@ -375,15 +532,100 @@ function SelectionSummaryBar({
   );
 }
 
-function countSelectedByKind(
-  records: WorkspaceDataRecord[],
-  selectedRefs: Set<string>,
-): Record<WorkspaceDataKind, number> {
-  return records.reduce<Record<WorkspaceDataKind, number>>(
+function formatSectionLabel(filter: SourceFilter): string {
+  return filter === "job" ? "Jobs" : "News";
+}
+
+function formatRecordSource(record: WorkspaceDataRecord): string {
+  if (record.sourceId === "tavily") return "Tavily Search";
+  if (record.sourceId === "liepin") return "Liepin scraper";
+  return record.sourceId || formatWorkspaceDataKind(record.kind);
+}
+
+function formatReportLabel(value: unknown): string {
+  if (typeof value !== "string" || !value.trim()) return "-";
+  return value.split("/").pop() ?? value;
+}
+
+function formatRecordSubtitle(record: WorkspaceDataRecord): string {
+  if (record.kind === "job") {
+    return `${String(record.fields.company ?? "Job")} · ${String(record.fields.location ?? record.fields.region ?? "Project data")}`;
+  }
+  return `${formatRecordSource(record)} · ${String(record.fields.query ?? record.url ?? "Project data")}`;
+}
+
+function getDetailFields(record: WorkspaceDataRecord): Array<[string, unknown]> {
+  if (record.kind === "job") {
+    return Object.entries(record.fields);
+  }
+
+  const fields: Array<[string, unknown]> = [];
+  if (typeof record.fields.query === "string") fields.push(["Query", record.fields.query]);
+  if (typeof record.fields.reportPath === "string") {
+    fields.push(["Report path", record.fields.reportPath]);
+  }
+  if (record.url) fields.push(["URL", record.url]);
+  return fields;
+}
+
+function countBySection(records: WorkspaceDataRecord[]): Record<SourceFilter, number> {
+  return records.reduce<Record<SourceFilter, number>>(
     (acc, record) => {
-      if (selectedRefs.has(record.ref)) acc[record.kind] += 1;
+      if (record.kind === "job") acc.job += 1;
+      else acc.news += 1;
       return acc;
     },
-    { job: 0, news: 0, web_page: 0 },
+    { job: 0, news: 0 },
   );
+}
+
+function countSelectedBySection(
+  records: WorkspaceDataRecord[],
+  selectedRefs: Set<string>,
+): Record<SourceFilter, number> {
+  return records.reduce<Record<SourceFilter, number>>(
+    (acc, record) => {
+      if (!selectedRefs.has(record.ref)) return acc;
+      if (record.kind === "job") acc.job += 1;
+      else acc.news += 1;
+      return acc;
+    },
+    { job: 0, news: 0 },
+  );
+}
+
+function matchesSearch(record: WorkspaceDataRecord, query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  return [
+    record.title,
+    record.summary,
+    record.rawText,
+    record.url,
+    ...Object.values(record.fields).flatMap((value) =>
+      Array.isArray(value) ? value : [value],
+    ),
+  ]
+    .filter((value): value is string | number | boolean => value !== null && value !== undefined)
+    .some((value) => String(value).toLowerCase().includes(normalized));
+}
+
+function matchesFieldFilter(
+  record: WorkspaceDataRecord,
+  field: string,
+  value: string,
+): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return true;
+  const fieldValue = record.fields[field];
+  return String(fieldValue ?? "").toLowerCase().includes(normalized);
+}
+
+function matchesLocationFilter(record: WorkspaceDataRecord, value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return true;
+  return [
+    record.fields.location,
+    record.fields.region,
+  ].some((fieldValue) => String(fieldValue ?? "").toLowerCase().includes(normalized));
 }

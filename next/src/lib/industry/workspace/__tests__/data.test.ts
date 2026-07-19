@@ -7,7 +7,7 @@ import {
   ensureDemoWorkspace,
 } from "../bootstrap";
 import { readWorkspaceData, writeCurrentSelection } from "../data";
-import { readJsonFile } from "../fs";
+import { readJsonFile, writeJsonFile, writeTextFile } from "../fs";
 import type { WorkspaceSelectionManifest } from "../schema";
 
 describe("workspace data", () => {
@@ -26,23 +26,18 @@ describe("workspace data", () => {
 
     const view = await readWorkspaceData(DEMO_PROJECT_SLUG, root);
 
-    expect(view.records).toHaveLength(3);
-    expect(view.records.map((record) => record.ref)).toEqual(
-      expect.arrayContaining([
-        "sources/external/normalized/jobs.jsonl#job-001",
-        "sources/external/normalized/jobs.jsonl#job-002",
-        "sources/external/normalized/news.jsonl#news-001",
-      ]),
-    );
+    expect(view.records).toHaveLength(42);
+    expect(view.records[0]?.sourceId).toBe("liepin");
+    expect(view.records.some((record) => record.fields.salary === "急聘10-25k")).toBe(true);
     expect(view.sourceCounts).toEqual({
-      all: 3,
-      job: 2,
-      news: 1,
+      all: 42,
+      job: 42,
+      news: 0,
       web_page: 0,
     });
     expect(view.selectedCounts).toEqual({
       job: 2,
-      news: 1,
+      news: 0,
       web_page: 0,
     });
   });
@@ -50,20 +45,20 @@ describe("workspace data", () => {
   it("writes selected record refs into selections/current.json", async () => {
     await ensureDemoWorkspace(root);
 
+    const view = await readWorkspaceData(DEMO_PROJECT_SLUG, root);
+    const firstRef = view.records[0]?.ref as string;
+    const secondRef = view.records[1]?.ref as string;
     const selection = await writeCurrentSelection(
       DEMO_PROJECT_SLUG,
       [
-        "sources/external/normalized/jobs.jsonl#job-001",
-        "sources/external/normalized/jobs.jsonl#job-001",
-        "sources/external/normalized/news.jsonl#news-001",
+        firstRef,
+        firstRef,
+        secondRef,
       ],
       root,
     );
 
-    expect(selection.selectedRecordRefs).toEqual([
-      "sources/external/normalized/jobs.jsonl#job-001",
-      "sources/external/normalized/news.jsonl#news-001",
-    ]);
+    expect(selection.selectedRecordRefs).toEqual([firstRef, secondRef]);
     expect(selection.updatedAt).toBeTruthy();
 
     const saved = await readJsonFile<WorkspaceSelectionManifest>(
@@ -71,5 +66,87 @@ describe("workspace data", () => {
       `projects/${DEMO_PROJECT_SLUG}/selections/current.json`,
     );
     expect(saved.selectedRecordRefs).toEqual(selection.selectedRecordRefs);
+  });
+
+  it("defaults to all records selected when current selection is empty", async () => {
+    await ensureDemoWorkspace(root);
+    await writeJsonFile(
+      root,
+      `projects/${DEMO_PROJECT_SLUG}/selections/current.json`,
+      {
+        id: "current",
+        name: "Current report evidence",
+        selectedRecordRefs: [],
+        selectedFileRefs: [],
+        createdAt: "2026-07-19T10:00:00.000Z",
+      },
+    );
+
+    const view = await readWorkspaceData(DEMO_PROJECT_SLUG, root);
+
+    expect(view.selection.selectedRecordRefs).toHaveLength(42);
+    expect(view.selectedCounts).toEqual({
+      job: 42,
+      news: 0,
+      web_page: 0,
+    });
+  });
+
+  it("loads Tavily markdown report content into webpage raw text", async () => {
+    await ensureDemoWorkspace(root);
+    await writeTextFile(
+      root,
+      `projects/${DEMO_PROJECT_SLUG}/sources/external/raw/tavily/RUN-test/topic.md`,
+      "# Tavily Search Report\n\n- Query: test\n\n## Result\nMarkdown body.",
+    );
+    await writeTextFile(
+      root,
+      `projects/${DEMO_PROJECT_SLUG}/sources/external/normalized/webpages.jsonl`,
+      `${JSON.stringify({
+        id: "tavily-test",
+        sourceId: "tavily",
+        kind: "web_page",
+        title: "Tavily report",
+        summary: "Markdown report",
+        fields: {
+          reportPath: "sources/external/raw/tavily/RUN-test/topic.md",
+          query: "test",
+        },
+        rawText: "fallback text",
+        createdAt: "2026-07-19T10:00:00.000Z",
+      })}\n`,
+    );
+
+    const view = await readWorkspaceData(DEMO_PROJECT_SLUG, root);
+    const record = view.records.find((item) => item.id === "tavily-test");
+
+    expect(record?.rawText).toContain("# Tavily Search Report");
+    expect(record?.rawText).toContain("Markdown body.");
+  });
+
+  it("keeps Tavily fallback text when the markdown report is missing", async () => {
+    await ensureDemoWorkspace(root);
+    await writeTextFile(
+      root,
+      `projects/${DEMO_PROJECT_SLUG}/sources/external/normalized/webpages.jsonl`,
+      `${JSON.stringify({
+        id: "tavily-missing",
+        sourceId: "tavily",
+        kind: "web_page",
+        title: "Tavily missing report",
+        summary: "Missing markdown report",
+        fields: {
+          reportPath: "sources/external/raw/tavily/RUN-missing/topic.md",
+          query: "test",
+        },
+        rawText: "fallback text",
+        createdAt: "2026-07-19T10:00:00.000Z",
+      })}\n`,
+    );
+
+    const view = await readWorkspaceData(DEMO_PROJECT_SLUG, root);
+    const record = view.records.find((item) => item.id === "tavily-missing");
+
+    expect(record?.rawText).toBe("fallback text");
   });
 });

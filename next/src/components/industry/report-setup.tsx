@@ -206,8 +206,12 @@ export function ReportSetupPage({
 }
 
 function defaultReportName(projectName: string): string {
-  if (projectName.toLowerCase().includes("automotive")) {
-    return "China Automotive Hiring Comparison";
+  const normalized = projectName.toLowerCase();
+  if (normalized.includes("semiconductor")) {
+    return "Automotive Semiconductor Hiring Comparison";
+  }
+  if (normalized.includes("automotive")) {
+    return "Automotive Hiring Comparison";
   }
   return `${projectName} Insight Report`;
 }

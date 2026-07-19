@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { List, Play, Settings2, Upload } from "lucide-react";
+import { List, Play, Upload } from "lucide-react";
 import { relativeTime } from "@/lib/industry/format";
 import type {
   WorkspaceRunManifest,
@@ -51,7 +51,7 @@ export function SourcesPage({
       <div className="iis-page-header">
         <div>
           <h1>Sources</h1>
-          <p>Configure and run data collection for this project.</p>
+          <p>Run data collection for this project.</p>
         </div>
         <div className="iis-segmented">
           {TABS.map((item) => (
@@ -90,6 +90,8 @@ function ExternalSources({
   );
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [liveRun, setLiveRun] = useState<WorkspaceRunManifest | null>(null);
+  const [liveMessages, setLiveMessages] = useState<string[]>([]);
   const latestRun = sourcesView.runs[0];
 
   const selectedCount = selectedIds.length;
@@ -97,14 +99,27 @@ function ExternalSources({
   async function runCollection(sourceIds: string[]) {
     setRunning(true);
     setError(null);
+    setLiveRun(null);
+    setLiveMessages([]);
     try {
       const res = await fetch(`/api/projects/${projectId}/sources/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sourceIds }),
       });
-      const payload = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(payload.error ?? "Collection failed");
+      if (!res.ok || !res.body) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error ?? "Collection failed");
+      }
+      await readRunStream(res.body, (event) => {
+        if (event.run) setLiveRun(event.run);
+        if (event.message) {
+          setLiveMessages((current) => [...current.slice(-5), event.message as string]);
+        }
+        if (event.type === "failed") {
+          setError(event.error ?? event.message ?? "Collection failed");
+        }
+      });
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -115,7 +130,12 @@ function ExternalSources({
 
   return (
     <div className="iis-stack">
-      {latestRun && <CollectionRunPanel run={latestRun} />}
+      {(liveRun ?? latestRun) && (
+        <CollectionRunPanel
+          run={(liveRun ?? latestRun) as WorkspaceRunManifest}
+          messages={liveMessages}
+        />
+      )}
 
       <div className="iis-source-toolbar">
         <span>{selectedCount} sources selected</span>
@@ -168,19 +188,6 @@ function ExternalSources({
                 )}
               </small>
             </div>
-            <div className="iis-source-actions">
-              <button className="iis-button iis-button-ghost" type="button">
-                <Settings2 size={18} /> Configure
-              </button>
-              <button
-                className="iis-button iis-button-ghost"
-                type="button"
-                disabled={running}
-                onClick={() => void runCollection([source.id])}
-              >
-                <Play size={18} /> Run
-              </button>
-            </div>
           </section>
         );
       })}
@@ -188,7 +195,43 @@ function ExternalSources({
   );
 }
 
-function CollectionRunPanel({ run }: { run: WorkspaceRunManifest }) {
+type RunStreamEvent = {
+  type?: string;
+  run?: WorkspaceRunManifest;
+  message?: string;
+  error?: string;
+};
+
+async function readRunStream(
+  body: ReadableStream<Uint8Array>,
+  onEvent: (event: RunStreamEvent) => void,
+) {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      onEvent(JSON.parse(line) as RunStreamEvent);
+    }
+  }
+
+  if (buffer.trim()) onEvent(JSON.parse(buffer) as RunStreamEvent);
+}
+
+function CollectionRunPanel({
+  run,
+  messages,
+}: {
+  run: WorkspaceRunManifest;
+  messages?: string[];
+}) {
   return (
     <section className="iis-card iis-run-panel">
       <header>
@@ -210,8 +253,15 @@ function CollectionRunPanel({ run }: { run: WorkspaceRunManifest }) {
       <div className="iis-run-steps">
         <span>{run.sourceIds.length > 1 ? "Multiple sources" : run.sourceIds[0]}</span>
         <span>{run.recordsCreated} records</span>
-        <span>{run.warnings.length ? "Completed with warnings" : "Ready"}</span>
+        <span>{run.warnings.length ? "Warnings or errors recorded" : "Ready"}</span>
       </div>
+      {messages && messages.length > 0 && (
+        <ol className="iis-run-log">
+          {messages.map((message, index) => (
+            <li key={`${index}-${message}`}>{message}</li>
+          ))}
+        </ol>
+      )}
       {run.warnings.length > 0 && (
         <p>
           Current: <strong>{run.warnings[0]}</strong>
