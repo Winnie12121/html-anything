@@ -34,11 +34,23 @@ describe("workspace data", () => {
       job: 150,
       news: 0,
       web_page: 0,
+      sheet_row: 0,
+      pdf_page: 0,
+      markdown: 0,
+      text: 0,
+      json: 0,
+      image: 0,
     });
     expect(view.selectedCounts).toEqual({
       job: 2,
       news: 0,
       web_page: 0,
+      sheet_row: 0,
+      pdf_page: 0,
+      markdown: 0,
+      text: 0,
+      json: 0,
+      image: 0,
     });
   });
 
@@ -89,6 +101,12 @@ describe("workspace data", () => {
       job: 150,
       news: 0,
       web_page: 0,
+      sheet_row: 0,
+      pdf_page: 0,
+      markdown: 0,
+      text: 0,
+      json: 0,
+      image: 0,
     });
   });
 

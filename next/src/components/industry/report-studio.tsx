@@ -409,8 +409,8 @@ function StudioSources({ studioView }: { studioView: WorkspaceReportStudioView }
   return (
     <div className="iis-studio-list">
       {studioView.selectedRecords.length ? (
-        studioView.selectedRecords.map((record) => (
-          <p key={record.ref}>
+        studioView.selectedRecords.map((record, index) => (
+          <p key={`${record.ref}:${index}`}>
             <FileText size={16} /> {record.title}
           </p>
         ))

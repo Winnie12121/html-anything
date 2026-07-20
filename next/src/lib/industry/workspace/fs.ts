@@ -51,6 +51,16 @@ export async function writeTextFile(
   await writeFile(filePath, value, "utf8");
 }
 
+export async function writeBinaryFile(
+  root: string,
+  relativePath: string,
+  value: Uint8Array,
+): Promise<void> {
+  const filePath = safeJoin(root, relativePath);
+  await ensureDir(path.dirname(filePath));
+  await writeFile(filePath, value);
+}
+
 export async function removeWorkspacePath(
   root: string,
   relativePath: string,

@@ -1448,6 +1448,7 @@ a {
 }
 
 .iis-dropzone {
+  position: relative;
   display: grid;
   min-height: 150px;
   place-items: center;
@@ -1467,6 +1468,14 @@ a {
 
 .iis-dropzone span {
   font-size: 13px;
+}
+
+.iis-dropzone input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .iis-dropzone.active {
@@ -1722,6 +1731,15 @@ a {
 
 .iis-data-table-news {
   min-width: 760px;
+}
+
+.iis-data-table-uploaded {
+  min-width: 680px;
+}
+
+.iis-data-table-uploaded td:nth-child(4) {
+  max-width: 280px;
+  overflow-wrap: anywhere;
 }
 
 .iis-data-table-wrap {

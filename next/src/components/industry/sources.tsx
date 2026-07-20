@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { List, Play, Upload } from "lucide-react";
+import { List, Play, Trash2, Upload } from "lucide-react";
 import { relativeTime } from "@/lib/industry/format";
+import type { WorkspaceUploadedFile } from "@/lib/industry/workspace/uploads";
 import type {
   WorkspaceRunManifest,
   WorkspaceSourcesView,
@@ -70,7 +71,7 @@ export function SourcesPage({
       {tab === "external" && (
         <ExternalSources projectId={projectId} sourcesView={sourcesView} />
       )}
-      {tab === "uploads" && <UploadedFiles />}
+      {tab === "uploads" && <UploadedFiles projectId={projectId} />}
       {tab === "history" && <RunHistory runs={sourcesView.runs} />}
     </ProjectShell>
   );
@@ -271,29 +272,147 @@ function CollectionRunPanel({
   );
 }
 
-function UploadedFiles() {
+function UploadedFiles({ projectId }: { projectId: string }) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [files, setFiles] = useState<WorkspaceUploadedFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    async function loadUploads() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/projects/${projectId}/uploads`);
+        const payload = (await res.json()) as {
+          uploads?: { files: WorkspaceUploadedFile[] };
+          error?: string;
+        };
+        if (!res.ok) throw new Error(payload.error ?? "Failed to load uploads");
+        if (alive) setFiles(payload.uploads?.files ?? []);
+      } catch (err) {
+        if (alive) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }
+    void loadUploads();
+    return () => {
+      alive = false;
+    };
+  }, [projectId]);
+
+  async function uploadFiles(fileList: FileList | null) {
+    const selected = Array.from(fileList ?? []);
+    if (!selected.length) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      selected.forEach((file) => form.append("files", file));
+      const res = await fetch(`/api/projects/${projectId}/uploads`, {
+        method: "POST",
+        body: form,
+      });
+      const payload = (await res.json()) as {
+        uploads?: { files: WorkspaceUploadedFile[] };
+        recordsCreated?: number;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(payload.error ?? "Upload failed");
+      setFiles(payload.uploads?.files ?? []);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function deleteUpload(fileId: string) {
+    setDeletingId(fileId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/uploads/${fileId}`, {
+        method: "DELETE",
+      });
+      const payload = (await res.json()) as {
+        uploads?: { files: WorkspaceUploadedFile[] };
+        error?: string;
+      };
+      if (!res.ok) throw new Error(payload.error ?? "Delete failed");
+      setFiles(payload.uploads?.files ?? []);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <div className="iis-stack">
-      <div className="iis-dropzone">
+      <label className="iis-dropzone">
         <Upload size={34} />
-        <strong>Upload workspace files in a later milestone</strong>
-        <span>Milestone 4 focuses on external mock collection.</span>
-      </div>
+        <strong>{uploading ? "Uploading and parsing..." : "Upload project evidence"}</strong>
+        <span>CSV, Excel, PDF, Markdown, text, JSON, and image files are supported.</span>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          disabled={uploading}
+          onChange={(event) => void uploadFiles(event.target.files)}
+        />
+      </label>
+      {error && <p className="iis-form-error">{error}</p>}
       <table className="iis-table">
         <thead>
           <tr>
             <th>File Name</th>
             <th>Type</th>
             <th>Status</th>
+            <th>Records</th>
             <th>Size</th>
             <th>Uploaded</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td colSpan={6}>No uploaded files yet.</td>
-          </tr>
+          {loading ? (
+            <tr>
+              <td colSpan={7}>Loading uploaded files...</td>
+            </tr>
+          ) : files.length ? (
+            files.map((file) => (
+              <tr key={file.id}>
+                <td>{file.name}</td>
+                <td>{file.mimeType || file.name.split(".").pop() || "file"}</td>
+                <td><StatusBadge status={file.status === "ready" ? "completed" : file.status} /></td>
+                <td>{file.parsedRecordRefs.length}</td>
+                <td>{formatBytes(file.size)}</td>
+                <td>{relativeTime(Date.parse(file.uploadedAt))}</td>
+                <td>
+                  <button
+                    className="iis-link-button"
+                    type="button"
+                    disabled={deletingId === file.id}
+                    onClick={() => void deleteUpload(file.id)}
+                  >
+                    <Trash2 size={16} /> {deletingId === file.id ? "Deleting..." : "Delete"}
+                  </button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={7}>No uploaded files yet.</td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
@@ -351,4 +470,10 @@ function formatDuration(run: WorkspaceRunManifest): string {
   const seconds = Math.max(1, Math.round((Date.parse(run.endedAt) - Date.parse(run.startedAt)) / 1000));
   if (seconds < 60) return `${seconds}s`;
   return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
+}
+
+function formatBytes(value: number): string {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }

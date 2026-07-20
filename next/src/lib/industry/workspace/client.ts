@@ -46,7 +46,16 @@ export type WorkspaceSourcesView = {
   runs: WorkspaceRunManifest[];
 };
 
-export type WorkspaceDataKind = "job" | "news" | "web_page";
+export type WorkspaceDataKind =
+  | "job"
+  | "news"
+  | "web_page"
+  | "sheet_row"
+  | "pdf_page"
+  | "markdown"
+  | "text"
+  | "json"
+  | "image";
 
 export type WorkspaceDataRecord = {
   id: string;
@@ -107,5 +116,12 @@ export type WorkspaceReportStudioView = {
 export function formatWorkspaceDataKind(kind: WorkspaceDataKind): string {
   if (kind === "job") return "Jobs";
   if (kind === "news") return "News";
-  return "Web Pages";
+  if (kind === "web_page") return "Web Pages";
+  if (kind === "sheet_row") return "Sheet Rows";
+  if (kind === "pdf_page") return "PDF Pages";
+  if (kind === "markdown") return "Markdown";
+  if (kind === "text") return "Text";
+  if (kind === "json") return "JSON";
+  if (kind === "image") return "Images";
+  return kind;
 }

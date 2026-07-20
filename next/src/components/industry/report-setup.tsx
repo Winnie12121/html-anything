@@ -46,7 +46,7 @@ export function ReportSetupPage({
   const selectedCounts = setupView.selectedCounts;
   const selectedSummary = useMemo(
     () =>
-      (["job", "news", "web_page"] as const)
+      (["job", "news", "web_page", "sheet_row", "pdf_page", "markdown", "text", "json", "image"] as const)
         .map((kind) => ({
           kind,
           label: formatWorkspaceDataKind(kind),
@@ -164,8 +164,8 @@ export function ReportSetupPage({
             )}
           </div>
           <div className="iis-selected-list">
-            {setupView.selectedRecords.slice(0, 8).map((record) => (
-              <p key={record.ref}>
+            {setupView.selectedRecords.slice(0, 8).map((record, index) => (
+              <p key={`${record.ref}:${index}`}>
                 <FileText size={16} /> {record.title}
               </p>
             ))}

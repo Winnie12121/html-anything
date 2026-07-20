@@ -9,3 +9,4 @@ export * from "./projects";
 export * from "./reports";
 export * from "./schema";
 export * from "./sources";
+export * from "./uploads";

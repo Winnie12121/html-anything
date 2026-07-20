@@ -7,15 +7,24 @@ import DOMPurify from "dompurify";
 import { CheckSquare, ExternalLink, FileText, Image, Search, X } from "lucide-react";
 import { marked } from "marked";
 import type {
+  WorkspaceDataKind,
   WorkspaceDataRecord,
   WorkspaceDataView,
 } from "@/lib/industry/workspace/client";
 import { formatWorkspaceDataKind } from "@/lib/industry/workspace/client";
 import { ProjectShell } from "./shell";
 
-type SourceFilter = "job" | "news";
+type SourceFilter = "job" | "news" | "uploaded";
 type SelectionFilter = "all" | "selected";
 const JOBS_PAGE_SIZE = 25;
+const UPLOADED_KINDS = new Set<WorkspaceDataKind>([
+  "sheet_row",
+  "pdf_page",
+  "markdown",
+  "text",
+  "json",
+  "image",
+]);
 
 export function DataWorkspacePage({
   projectId,
@@ -26,10 +35,14 @@ export function DataWorkspacePage({
 }) {
   const router = useRouter();
   const initialSourceId: SourceFilter =
-    (dataView?.sourceCounts.job ?? 0) > 0 ? "job" : "news";
+    (dataView?.sourceCounts.job ?? 0) > 0
+      ? "job"
+      : (dataView?.sourceCounts.web_page ?? 0) + (dataView?.sourceCounts.news ?? 0) > 0
+        ? "news"
+        : "uploaded";
   const [selectedSourceId, setSelectedSourceId] = useState<SourceFilter>(initialSourceId);
-  const [activeRecordId, setActiveRecordId] = useState<string | undefined>(
-    dataView?.records[0]?.id,
+  const [activeRecordKey, setActiveRecordKey] = useState<string | undefined>(
+    dataView?.records[0] ? getRecordRowKey(dataView.records[0], 0) : undefined,
   );
   const [selectedRefs, setSelectedRefs] = useState<string[]>(
     dataView?.selection.selectedRecordRefs.length
@@ -61,7 +74,7 @@ export function DataWorkspacePage({
 
   const selectedSet = new Set(selectedRefs);
   const sectionRecords = dataView.records.filter((record) =>
-    selectedSourceId === "job" ? record.kind === "job" : record.kind !== "job",
+    recordMatchesSection(record, selectedSourceId),
   );
   const filtered = sectionRecords.filter((record) =>
     matchesSearch(record, searchQuery) &&
@@ -78,7 +91,7 @@ export function DataWorkspacePage({
   const pageEnd = isJobsSection ? pageStart + JOBS_PAGE_SIZE : filtered.length;
   const visibleRecords = isJobsSection ? filtered.slice(pageStart, pageEnd) : filtered;
   const activeRecord =
-    visibleRecords.find((record) => record.id === activeRecordId) ??
+    visibleRecords.find((record, index) => getRecordRowKey(record, index) === activeRecordKey) ??
     visibleRecords[0] ??
     dataView.records[0];
   const sectionCounts = countBySection(dataView.records);
@@ -160,12 +173,12 @@ export function DataWorkspacePage({
           </DataSourceGroup>
           <DataSourceGroup title="Uploaded">
             <DataSourceButton
-              active={false}
+              active={selectedSourceId === "uploaded"}
               label="Uploaded Files"
-              count={0}
-              selectedCount={0}
+              count={sectionCounts.uploaded}
+              selectedCount={selectedCounts.uploaded}
               icon={<Image size={16} />}
-              onClick={() => {}}
+              onClick={() => setSelectedSourceId("uploaded")}
             />
           </DataSourceGroup>
         </aside>
@@ -247,9 +260,9 @@ export function DataWorkspacePage({
           <StructuredRecordsTable
             section={selectedSourceId}
             records={visibleRecords}
-            activeRecordId={activeRecord?.id}
+            activeRecordKey={activeRecordKey}
             selectedRefs={selectedSet}
-            onActivate={setActiveRecordId}
+            onActivate={setActiveRecordKey}
             onToggle={toggleRecord}
             onToggleAll={toggleVisibleRecords}
             allVisibleSelected={allVisibleSelected}
@@ -319,10 +332,14 @@ function DataSourceButton({
   );
 }
 
+function getRecordRowKey(record: WorkspaceDataRecord, index: number): string {
+  return `${record.ref}:${record.createdAt}:${index}`;
+}
+
 function StructuredRecordsTable({
   section,
   records,
-  activeRecordId,
+  activeRecordKey,
   selectedRefs,
   onActivate,
   onToggle,
@@ -331,18 +348,24 @@ function StructuredRecordsTable({
 }: {
   section: SourceFilter;
   records: WorkspaceDataRecord[];
-  activeRecordId?: string;
+  activeRecordKey?: string;
   selectedRefs: Set<string>;
-  onActivate: (recordId: string) => void;
+  onActivate: (recordKey: string) => void;
   onToggle: (ref: string) => void;
   onToggleAll: () => void;
   allVisibleSelected: boolean;
 }) {
   const isJobs = section === "job";
+  const isUploaded = section === "uploaded";
+  const tableClassName = isJobs
+    ? "iis-data-table"
+    : isUploaded
+      ? "iis-data-table iis-data-table-uploaded"
+      : "iis-data-table iis-data-table-news";
 
   return (
     <div className="iis-data-table-wrap">
-      <table className={isJobs ? "iis-data-table" : "iis-data-table iis-data-table-news"}>
+      <table className={tableClassName}>
         <thead>
           <tr>
             <th>
@@ -362,6 +385,11 @@ function StructuredRecordsTable({
                 <th>Experience</th>
                 <th>Education</th>
               </>
+            ) : isUploaded ? (
+              <>
+                <th>Type</th>
+                <th>File</th>
+              </>
             ) : (
               <>
                 <th>Source</th>
@@ -372,13 +400,14 @@ function StructuredRecordsTable({
         </thead>
         <tbody>
           {records.length ? (
-            records.map((record) => {
+            records.map((record, index) => {
               const checked = selectedRefs.has(record.ref);
+              const rowKey = getRecordRowKey(record, index);
               return (
                 <tr
-                  key={record.ref}
-                  className={activeRecordId === record.id ? "active" : ""}
-                  onClick={() => onActivate(record.id)}
+                  key={rowKey}
+                  className={activeRecordKey === rowKey ? "active" : ""}
+                  onClick={() => onActivate(rowKey)}
                 >
                   <td>
                     <input
@@ -394,7 +423,7 @@ function StructuredRecordsTable({
                   </td>
                   <td>
                     <strong>{record.title}</strong>
-                    <small>{record.summary}</small>
+                    {!isUploaded && <small>{record.summary}</small>}
                   </td>
                   {isJobs ? (
                     <>
@@ -403,6 +432,11 @@ function StructuredRecordsTable({
                       <td>{String(record.fields.salary ?? "-")}</td>
                       <td>{String(record.fields.experience ?? "-")}</td>
                       <td>{String(record.fields.education ?? "-")}</td>
+                    </>
+                  ) : isUploaded ? (
+                    <>
+                      <td>{formatWorkspaceDataKind(record.kind)}</td>
+                      <td>{String(record.fields.fileName ?? "-")}</td>
                     </>
                   ) : (
                     <>
@@ -469,6 +503,7 @@ function DataDetailsPanel({
   const isMarkdownRecord = Boolean(
     record &&
     (record.sourceId === "tavily" ||
+      record.kind === "markdown" ||
       (record.kind === "web_page" && typeof record.fields.reportPath === "string")),
   );
   const markdownHtml = useMemo(() => {
@@ -592,7 +627,9 @@ function SelectionSummaryBar({
 }
 
 function formatSectionLabel(filter: SourceFilter): string {
-  return filter === "job" ? "Jobs" : "News";
+  if (filter === "job") return "Jobs";
+  if (filter === "news") return "News";
+  return "Uploaded Files";
 }
 
 function formatRecordRangeLabel({
@@ -619,6 +656,7 @@ function formatRecordRangeLabel({
 function formatRecordSource(record: WorkspaceDataRecord): string {
   if (record.sourceId === "tavily") return "Tavily Search";
   if (record.sourceId === "liepin") return "Liepin scraper";
+  if (isUploadedRecord(record)) return "Uploaded File";
   return record.sourceId || formatWorkspaceDataKind(record.kind);
 }
 
@@ -631,12 +669,28 @@ function formatRecordSubtitle(record: WorkspaceDataRecord): string {
   if (record.kind === "job") {
     return `${String(record.fields.company ?? "Job")} · ${String(record.fields.location ?? record.fields.region ?? "Project data")}`;
   }
+  if (isUploadedRecord(record)) {
+    return `${formatWorkspaceDataKind(record.kind)} · ${String(record.fields.fileName ?? "Uploaded evidence")}`;
+  }
   return `${formatRecordSource(record)} · ${String(record.fields.query ?? record.url ?? "Project data")}`;
 }
 
 function getDetailFields(record: WorkspaceDataRecord): Array<[string, unknown]> {
   if (record.kind === "job") {
     return Object.entries(record.fields);
+  }
+
+  if (isUploadedRecord(record)) {
+    const fields: Array<[string, unknown]> = [
+      ["Type", formatWorkspaceDataKind(record.kind)],
+    ];
+    if (record.summary) fields.push(["Summary", record.summary]);
+    if (typeof record.fields.fileName === "string") fields.push(["File", record.fields.fileName]);
+    if (typeof record.fields.originalPath === "string") fields.push(["Original path", record.fields.originalPath]);
+    if (typeof record.fields.parsedPath === "string") fields.push(["Parsed path", record.fields.parsedPath]);
+    if (typeof record.fields.sheetName === "string") fields.push(["Sheet", record.fields.sheetName]);
+    if (typeof record.fields.page === "number") fields.push(["Page", record.fields.page]);
+    return fields;
   }
 
   const fields: Array<[string, unknown]> = [];
@@ -651,11 +705,12 @@ function getDetailFields(record: WorkspaceDataRecord): Array<[string, unknown]> 
 function countBySection(records: WorkspaceDataRecord[]): Record<SourceFilter, number> {
   return records.reduce<Record<SourceFilter, number>>(
     (acc, record) => {
-      if (record.kind === "job") acc.job += 1;
+      if (recordMatchesSection(record, "job")) acc.job += 1;
+      else if (recordMatchesSection(record, "uploaded")) acc.uploaded += 1;
       else acc.news += 1;
       return acc;
     },
-    { job: 0, news: 0 },
+    { job: 0, news: 0, uploaded: 0 },
   );
 }
 
@@ -666,12 +721,23 @@ function countSelectedBySection(
   return records.reduce<Record<SourceFilter, number>>(
     (acc, record) => {
       if (!selectedRefs.has(record.ref)) return acc;
-      if (record.kind === "job") acc.job += 1;
+      if (recordMatchesSection(record, "job")) acc.job += 1;
+      else if (recordMatchesSection(record, "uploaded")) acc.uploaded += 1;
       else acc.news += 1;
       return acc;
     },
-    { job: 0, news: 0 },
+    { job: 0, news: 0, uploaded: 0 },
   );
+}
+
+function recordMatchesSection(record: WorkspaceDataRecord, section: SourceFilter): boolean {
+  if (section === "job") return record.kind === "job";
+  if (section === "uploaded") return isUploadedRecord(record);
+  return record.kind !== "job" && !isUploadedRecord(record);
+}
+
+function isUploadedRecord(record: WorkspaceDataRecord): boolean {
+  return record.sourceId === "upload" || UPLOADED_KINDS.has(record.kind);
 }
 
 function matchesSearch(record: WorkspaceDataRecord, query: string): boolean {

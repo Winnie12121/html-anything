@@ -1,4 +1,33 @@
 {
   "version": 1,
-  "files": []
+  "files": [
+    {
+      "id": "upload-mrsiy5x9-119782",
+      "name": "Amazon_Purchase_Report_Sample.xlsx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "size": 8675,
+      "status": "ready",
+      "originalPath": "sources/uploaded/original/upload-mrsiy5x9-119782-amazon-purchase-report-sample.xlsx",
+      "parsedRecordRefs": [
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-1",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-2",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-3",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-4",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-5",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-1",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-2",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-3",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-4",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-5",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-1",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-2",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-3",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-4",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-5",
+        "sources/uploaded/normalized/records.jsonl#upload-mrsiy5x9-119782-row-untitled-project-6"
+      ],
+      "uploadedAt": "2026-07-20T01:06:53.181Z",
+      "parsedPath": "sources/uploaded/parsed/upload-mrsiy5x9-119782.md"
+    }
+  ]
 }

@@ -21,6 +21,7 @@ const DATA_FILES: Array<{ path: string; kind: WorkspaceDataKind }> = [
   { path: "sources/external/normalized/jobs.jsonl", kind: "job" },
   { path: "sources/external/normalized/news.jsonl", kind: "news" },
   { path: "sources/external/normalized/webpages.jsonl", kind: "web_page" },
+  { path: "sources/uploaded/normalized/records.jsonl", kind: "text" },
 ];
 
 export async function readWorkspaceData(
@@ -168,6 +169,16 @@ function makeKindCounts(
       acc[record.kind] += 1;
       return acc;
     },
-    { job: 0, news: 0, web_page: 0 },
+    {
+      job: 0,
+      news: 0,
+      web_page: 0,
+      sheet_row: 0,
+      pdf_page: 0,
+      markdown: 0,
+      text: 0,
+      json: 0,
+      image: 0,
+    },
   );
 }

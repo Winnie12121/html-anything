@@ -72,6 +72,7 @@ async function ensureProjectDirectories(
     projectPath(projectSlug, "sources/external/normalized"),
     projectPath(projectSlug, "sources/uploaded/original"),
     projectPath(projectSlug, "sources/uploaded/parsed"),
+    projectPath(projectSlug, "sources/uploaded/normalized"),
     projectPath(projectSlug, "runs"),
     projectPath(projectSlug, "selections"),
     projectPath(projectSlug, "reports"),
@@ -161,6 +162,12 @@ async function seedSources(root: string): Promise<void> {
   await seedJsonl(
     root,
     projectPath(DEMO_PROJECT_SLUG, "sources/external/normalized/webpages.jsonl"),
+    [],
+  );
+
+  await seedJsonl(
+    root,
+    projectPath(DEMO_PROJECT_SLUG, "sources/uploaded/normalized/records.jsonl"),
     [],
   );
 }

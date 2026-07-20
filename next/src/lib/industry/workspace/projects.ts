@@ -127,6 +127,7 @@ export async function createWorkspaceProject(
   await writeTextFile(workspaceRoot, projectPath(slug, "sources/external/normalized/jobs.jsonl"), "");
   await writeTextFile(workspaceRoot, projectPath(slug, "sources/external/normalized/news.jsonl"), "");
   await writeTextFile(workspaceRoot, projectPath(slug, "sources/external/normalized/webpages.jsonl"), "");
+  await writeTextFile(workspaceRoot, projectPath(slug, "sources/uploaded/normalized/records.jsonl"), "");
   await writeJsonFile(workspaceRoot, projectPath(slug, "selections/current.json"), {
     id: "current",
     name: "Current report evidence",
@@ -191,6 +192,7 @@ async function ensureProjectDirectories(root: string, slug: string): Promise<voi
     projectPath(slug, "sources/external/normalized"),
     projectPath(slug, "sources/uploaded/original"),
     projectPath(slug, "sources/uploaded/parsed"),
+    projectPath(slug, "sources/uploaded/normalized"),
     projectPath(slug, "runs"),
     projectPath(slug, "selections"),
     projectPath(slug, "reports"),
@@ -277,6 +279,7 @@ async function readProjectDataRecords(
     "sources/external/normalized/jobs.jsonl",
     "sources/external/normalized/news.jsonl",
     "sources/external/normalized/webpages.jsonl",
+    "sources/uploaded/normalized/records.jsonl",
   ];
   const records: ProjectDataRecord[] = [];
 
